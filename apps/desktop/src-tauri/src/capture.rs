@@ -221,9 +221,11 @@ pub fn capture_inbox_list(generation: u64, state: State<GraphState>) -> AppResul
     Ok(out)
 }
 
-/// Envelopes this app spools itself (deep-link captures) are one short text
-/// payload — anything near this cap is not a capture, it's smuggling.
-const INBOX_SPOOL_MAX_BYTES: usize = 64 * 1024;
+/// The hard boundary for envelopes crossing an iOS App Group. Rich Safari
+/// captures include extracted page Markdown, so this needs the same practical
+/// headroom as browser native messaging. Deep-link text is capped separately
+/// by `TEXT_CAPTURE_MAX_LENGTH` before it reaches this boundary.
+const INBOX_SPOOL_MAX_BYTES: usize = 1024 * 1024;
 
 fn ensure_spool_size(json: &str) -> AppResult<()> {
     if json.len() > INBOX_SPOOL_MAX_BYTES {
@@ -373,8 +375,8 @@ fn relay_shared_spools(shared_inbox: &Path, root: &Path) -> AppResult<u32> {
             continue; // not a spool filename this app would ever address
         };
         if metadata.len() > INBOX_SPOOL_MAX_BYTES as u64 {
-            // Anything near the cap is not a capture. Quarantined beside the
-            // shared inbox so it can't wedge the relay forever.
+            // Oversized entries are quarantined beside the shared inbox so a
+            // malformed producer cannot wedge the relay forever.
             let rejected = shared_inbox
                 .parent()
                 .ok_or_else(|| AppError::io("shared inbox has no parent directory"))?

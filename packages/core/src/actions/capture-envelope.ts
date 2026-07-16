@@ -4,21 +4,22 @@ import { z } from 'zod'
  * The platform-agnostic capture envelope (Plan 11): the contract between
  * every capture producer and the app's drain. The Chrome extension's
  * native-messaging host writes one `<id>.json` envelope (plus an optional
- * sibling screenshot) into the graph's capture inbox; the iOS share
- * extension writes the same shape into the App Group inbox the main app
- * relays on foreground. This module is deliberately browser-safe — it imports nothing
- * but zod, and the extension consumes it through the package's
- * `./capture-envelope` subpath without pulling the rest of core.
+ * sibling screenshot) into the graph's capture inbox. The iOS Share
+ * extension and Safari Web Extension write the same shape into the App Group
+ * inbox the main app relays on foreground. This module is deliberately
+ * browser-safe — it imports nothing but zod, and the extension consumes it
+ * through the package's `./capture-envelope` subpath without pulling the
+ * rest of core.
  *
  * This TS schema is the single source of truth; the Rust host's serde structs
  * (`apps/native-host`) mirror it and must be kept in sync.
  */
 
 /**
- * Where a link capture originated: the Chrome extension (through the
- * native-messaging host) or the iOS share extension (through the App Group
- * inbox the main app relays on foreground). Provenance only — every source
- * produces the same envelope shape.
+ * Where a link capture originated: a browser extension (`extension`, through
+ * Chrome's native host or Safari's App Group handler) or the iOS Share
+ * extension (through the App Group inbox the main app relays on foreground).
+ * Provenance only — every source produces the same envelope shape.
  */
 export const captureSourceSchema = z.enum(['extension', 'ios-share'])
 

@@ -44,7 +44,7 @@ enum CaptureInboxError: Error {
 /// Field caps in UTF-16 code units — the unit zod's `.max()` counts on the
 /// drain side, so a capped value here can never be quarantined over length
 /// there. Applied at the producer so an envelope also stays inside the
-/// relay's 64 KiB spool cap. `textMax` mirrors `TEXT_CAPTURE_MAX_LENGTH`.
+/// relay's 1 MiB spool cap. `textMax` mirrors `TEXT_CAPTURE_MAX_LENGTH`.
 private enum FieldCap {
     static let title = 1_000
     static let selection = 10_000
@@ -70,7 +70,7 @@ enum CaptureInbox {
 
     /// The relay's spool cap (`INBOX_SPOOL_MAX_BYTES` in `capture.rs`) — an
     /// envelope over it is quarantined unread, so it must never be spooled.
-    static let spoolMaxBytes = 64 * 1024
+    static let spoolMaxBytes = 1024 * 1024
 
     /// Spool a link capture. Empty titles are allowed (the drain falls back
     /// to the URL's host); empty selections and descriptions are dropped.
