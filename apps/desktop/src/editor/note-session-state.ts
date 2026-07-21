@@ -1,4 +1,16 @@
-import { appendBlock, editTaskLine, errorMessage, isAppError, removeTaskLine, taskLineToBullet, toggleTaskMarker, upsertFrontmatter, type TaskMarker } from '@reflect/core'
+import {
+  addSuggestedBacklink,
+  appendBlock,
+  editTaskLine,
+  errorMessage,
+  isAppError,
+  removeTaskLine,
+  taskLineToBullet,
+  toggleTaskMarker,
+  upsertFrontmatter,
+  type SuggestedBacklinkMention,
+  type TaskMarker,
+} from '@reflect/core'
 import { splitDoc } from './note-session-doc'
 import { frontmatterPatchToYaml, type FrontmatterPatch } from './note-session-frontmatter'
 import type { NoteSession, NoteSessionOptions, NoteSessionSnapshot, NoteSessionStatus } from './note-session-types'
@@ -445,6 +457,10 @@ export function createNoteSession(options: NoteSessionOptions): NoteSession {
     return commitBodyEdit((full) => taskLineToBullet(full, task))
   }
 
+  function commitSuggestedBacklink(mention: SuggestedBacklinkMention): Promise<boolean> {
+    return commitBodyEdit((full) => addSuggestedBacklink(full, mention))
+  }
+
   function commitBodyAppend(block: string): Promise<boolean> {
     if (block.trim() === '') {
       return Promise.resolve(false)
@@ -491,6 +507,7 @@ export function createNoteSession(options: NoteSessionOptions): NoteSession {
     commitTaskEdit,
     commitTaskRemove,
     commitTaskToBullet,
+    commitSuggestedBacklink,
     commitBodyAppend,
     dispose,
     discard,

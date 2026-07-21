@@ -1,4 +1,4 @@
-import type { TaskMarker } from '@reflect/core'
+import type { SuggestedBacklinkMention, TaskMarker } from '@reflect/core'
 import type { FrontmatterPatch } from './note-session-frontmatter'
 import type { RoundTripFidelity } from './roundtrip'
 
@@ -206,6 +206,14 @@ export interface NoteSession {
    * transactional revert, and `TaskStaleError` propagation as {@link commitTaskToggle}.
    */
   commitTaskToBullet: (task: TaskMarker) => Promise<boolean>
+  /**
+   * Accept a suggested backlink by wrapping its exact plain-text mention in
+   * the live buffer, then flushing now. The parser and coordinates are
+   * revalidated before mutation; stale suggestions throw
+   * `SuggestedBacklinkStaleError`. Same gating and transactional behavior as
+   * {@link commitTaskToggle}.
+   */
+  commitSuggestedBacklink: (mention: SuggestedBacklinkMention) => Promise<boolean>
   /**
    * Append a markdown block to the end of the body (own paragraph, blank-line
    * separated — `appendBlock`) from an out-of-editor action like the

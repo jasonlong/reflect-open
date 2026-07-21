@@ -70,6 +70,12 @@ export { gistBodyHash, gistFilename } from './gist'
 export { slugForTitle } from './slug'
 export { subjectAliases } from './subject-aliases'
 export {
+  addSuggestedBacklink,
+  findSuggestedBacklinkMention,
+  SuggestedBacklinkStaleError,
+  type SuggestedBacklinkMention,
+} from './suggested-backlink'
+export {
   normalizeWikiTarget,
   resolved,
   resolveWikiLink,

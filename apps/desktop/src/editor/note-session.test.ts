@@ -1,4 +1,9 @@
-import { parseNote, TaskStaleError, type TaskMarker } from '@reflect/core'
+import {
+  findSuggestedBacklinkMention,
+  parseNote,
+  TaskStaleError,
+  type TaskMarker,
+} from '@reflect/core'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createNoteSession, type NoteSessionSnapshot } from './note-session'
 import type { RoundTripFidelity } from './roundtrip'
@@ -801,6 +806,28 @@ describe('commitTaskToggle', () => {
 
     h.session.editorChanged('+ [ ] something else entirely\n')
     await expect(h.session.commitTaskToggle(firstTask(source))).rejects.toBeInstanceOf(TaskStaleError)
+  })
+})
+
+describe('commitSuggestedBacklink', () => {
+  it('links the live mention while preserving unsaved edits', async () => {
+    const source = '# Notes\n\nMet Ada yesterday.\n'
+    const mention = findSuggestedBacklinkMention(source, ['Ada'], 'Ada Lovelace')
+    if (mention === null) {
+      throw new Error('expected a suggested backlink mention')
+    }
+    const h = harness({ disk: source })
+    h.session.load()
+    await settled()
+
+    h.session.editorChanged('# Notes\n\nMet Ada yesterday.\n\nunsaved\n')
+    expect(await h.session.commitSuggestedBacklink(mention)).toBe(true)
+    expect(h.writes.at(-1)?.contents).toBe(
+      '# Notes\n\nMet [[Ada Lovelace|Ada]] yesterday.\n\nunsaved\n',
+    )
+    expect(h.applied.at(-1)).toBe(
+      '# Notes\n\nMet [[Ada Lovelace|Ada]] yesterday.\n\nunsaved\n',
+    )
   })
 })
 

@@ -143,6 +143,7 @@ export {
   type BlockContextSource,
 } from './block-context'
 export { extractSnippetTasks, type SnippetTask } from './snippet-tasks'
+export { getSuggestedBacklinks, type SuggestedBacklink } from './suggested-backlinks'
 export { parseSearchQuery, type ParsedSearchQuery, type SearchFilters } from './filter-query'
 export {
   searchNotes,
