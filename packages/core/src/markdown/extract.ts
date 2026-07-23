@@ -1,5 +1,6 @@
 import type { SyntaxNode } from '@meowdown/markdown'
 import { dateFromDailyPath, isDaily } from '../graph/paths'
+import { extractListBlocks } from './blocks'
 import { parseFrontmatter, splitFrontmatter } from './frontmatter'
 import { parseBody } from './grammar'
 import { foldTag } from './keys'
@@ -163,13 +164,19 @@ function basename(path: string): string {
   return file.replace(/\.md$/i, '')
 }
 
-function readWikiLink(body: string, from: number, to: number, offset: number): WikiLink {
+function readWikiLink(
+  body: string,
+  from: number,
+  to: number,
+  offset: number,
+  syntax: WikiLink['syntax'],
+): WikiLink {
   const inner = body.slice(from + 2, to - 2)
   const pipe = inner.indexOf('|')
   const target = unescapeMarkdownText((pipe === -1 ? inner : inner.slice(0, pipe)).trim())
   const alias =
     pipe === -1 ? undefined : unescapeMarkdownText(inner.slice(pipe + 1).trim()) || undefined
-  return { target, alias, from: from + offset, to: to + offset }
+  return { syntax, target, alias, from: from + offset, to: to + offset }
 }
 
 function readLink(body: string, from: number, to: number, offset: number): MarkdownLink | null {
@@ -322,6 +329,7 @@ export function parseNote(input: { path: string; source: string }): ParsedNote {
   const tagExcluded: Span[] = [] // body coords — regions that don't yield tags
   const literalPlainText: Span[] = [] // body coords — regions that render backslashes literally
   const taskNodes: SyntaxNode[] = [] // body coords — `Task` nodes, resolved after the walk
+  const listItems: SyntaxNode[] = [] // body coords — referenceable block candidates
 
   tree.iterate({
     enter: (node) => {
@@ -329,6 +337,9 @@ export function parseNote(input: { path: string; source: string }): ParsedNote {
 
       if (isSyntaxNode(name)) {
         cuts.push({ from, to })
+      }
+      if (name === 'ListItem') {
+        listItems.push(node.node)
       }
       if (name === 'Task') {
         // Resolve after the walk: the child `TaskMarker`/emphasis cuts this task
@@ -345,7 +356,15 @@ export function parseNote(input: { path: string; source: string }): ParsedNote {
       }
 
       if (isWikiNodeName(name)) {
-        wikiLinks.push(readWikiLink(body, wikiBracketStart(node), to, bodyOffset))
+        wikiLinks.push(
+          readWikiLink(
+            body,
+            wikiBracketStart(node),
+            to,
+            bodyOffset,
+            name === 'WikiEmbed' ? 'embed' : 'reference',
+          ),
+        )
         return false
       }
 
@@ -373,6 +392,15 @@ export function parseNote(input: { path: string; source: string }): ParsedNote {
     },
   })
 
+  const { blocks, markerCuts } = extractListBlocks({
+    body,
+    bodyOffset,
+    listItems,
+    cuts,
+    literalRanges: literalPlainText,
+  })
+  cuts.push(...markerCuts)
+
   const tags = new Map<string, string>()
   collectTags(body, tagExcluded, tags)
 
@@ -391,6 +419,7 @@ export function parseNote(input: { path: string; source: string }): ParsedNote {
     frontmatter,
     frontmatterWarning: warning,
     wikiLinks,
+    blocks,
     links,
     tags: [...tags.values()],
     headings,

@@ -283,7 +283,9 @@ describe('parseNote — meowdown grammar recovery & new inline nodes', () => {
 
   it('resolves a nested opener to the inner link', () => {
     const note = parse('[[a [[b]]')
-    expect(note.wikiLinks).toEqual([{ target: 'b', alias: undefined, from: 4, to: 9 }])
+    expect(note.wikiLinks).toEqual([
+      { syntax: 'reference', target: 'b', alias: undefined, from: 4, to: 9 },
+    ])
   })
 
   it('rejects a whitespace-only target', () => {
@@ -292,7 +294,9 @@ describe('parseNote — meowdown grammar recovery & new inline nodes', () => {
 
   it('projects a ![[x]] embed as a wiki link row spanning only the brackets', () => {
     const note = parse('See ![[photo.png]] here')
-    expect(note.wikiLinks).toEqual([{ target: 'photo.png', alias: undefined, from: 5, to: 18 }])
+    expect(note.wikiLinks).toEqual([
+      { syntax: 'embed', target: 'photo.png', alias: undefined, from: 5, to: 18 },
+    ])
   })
 
   it('strips highlight and inline-math marks from plain text, like other marks', () => {

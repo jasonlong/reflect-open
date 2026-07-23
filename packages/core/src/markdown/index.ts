@@ -13,6 +13,7 @@ export {
   type GistFrontmatter,
   type Span,
   type WikiLink,
+  type ParsedBlock,
   type MarkdownLink,
   type Heading,
   type AssetRef,
@@ -27,6 +28,14 @@ export {
   type ParsedFrontmatter,
 } from './frontmatter'
 export { parseBody } from './grammar'
+export {
+  isBlockId,
+  newBlockId,
+  parseWikiAddressCandidates,
+  type WikiAddressCandidates,
+  type WikiFragment,
+} from './block-address'
+export { findDuplicateBlockIds, type DuplicateBlockId } from './blocks'
 export { parseNote, isTagName, hasAuthoredTitle } from './extract'
 export {
   scanInlineWikiLinks,

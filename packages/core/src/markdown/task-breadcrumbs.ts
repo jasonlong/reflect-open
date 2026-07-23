@@ -12,9 +12,8 @@ import { plainTextOfRange } from './plain-text'
  * formatting is stripped consistently and wrapped lines stay one label.
  */
 
-/** The textblock that labels a list item: its first non-marker child, if that
- * child is a paragraph or task line (a nested list can't label its parent). */
-function listItemLeadTextblock(item: SyntaxNode): SyntaxNode | null {
+/** The textblock that labels a list item: its first paragraph or task line. */
+export function listItemLeadTextblock(item: SyntaxNode): SyntaxNode | null {
   for (let child = item.firstChild; child !== null; child = child.nextSibling) {
     if (child.name === 'ListMark') {
       continue
@@ -38,18 +37,13 @@ function listItemBreadcrumbLabel(
   return text === '' ? null : text
 }
 
-/** Collect a task's ancestor-list labels, outermost first. */
-export function taskBreadcrumbs(
+/** Collect a list item's ancestor labels, outermost first. */
+export function listItemBreadcrumbs(
   body: string,
-  taskNode: SyntaxNode,
+  ownItem: SyntaxNode,
   cuts: Span[],
   literalRanges: Span[],
 ): string[] {
-  const ownItem = taskNode.parent
-  if (ownItem?.name !== 'ListItem') {
-    return []
-  }
-
   const breadcrumbs: string[] = []
   for (let ancestor = ownItem.parent; ancestor !== null; ancestor = ancestor.parent) {
     if (ancestor.name === 'ListItem') {
@@ -61,4 +55,17 @@ export function taskBreadcrumbs(
   }
 
   return breadcrumbs.reverse()
+}
+
+/** Collect a task's ancestor-list labels, outermost first. */
+export function taskBreadcrumbs(
+  body: string,
+  taskNode: SyntaxNode,
+  cuts: Span[],
+  literalRanges: Span[],
+): string[] {
+  const ownItem = taskNode.parent
+  return ownItem?.name === 'ListItem'
+    ? listItemBreadcrumbs(body, ownItem, cuts, literalRanges)
+    : []
 }
