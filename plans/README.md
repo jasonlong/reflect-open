@@ -60,7 +60,7 @@ UX references:
 
 | Plan | Title | Priority | Effort | Risk | Depends on | Status |
 |---|---|---:|---:|---:|---|---|
-| [001](001-establish-block-addressing-contract.md) | Establish the Markdown block-addressing contract | P1 | M | MED | — | TODO |
+| [001](001-establish-block-addressing-contract.md) | Establish the Markdown block-addressing contract | P1 | M | MED | — | DONE |
 | [002](002-add-meowdown-block-identity-support.md) | Add block identity and reveal support to Meowdown | P1 | L | HIGH | 001 | TODO |
 | [003](003-index-blocks-and-link-fragments.md) | Index blocks and resolve wiki-link fragments | P1 | L | HIGH | 001 | TODO |
 | [004](004-ship-block-navigation-and-backlinks.md) | Ship block navigation, copy actions, and backlinks | P1 | L | HIGH | 002, 003 | TODO |

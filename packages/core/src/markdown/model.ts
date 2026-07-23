@@ -128,12 +128,32 @@ export function pinnedOrder(frontmatter: Frontmatter): number | null {
   return typeof frontmatter.pinned === 'number' ? frontmatter.pinned : null
 }
 
-/** A `[[target]]` or `[[target|alias]]` reference. */
+/** A wiki reference or embed and its authored source coordinates. */
 export interface WikiLink extends Span {
+  /** Whether the source used `[[...]]` or `![[...]]`. */
+  syntax: 'reference' | 'embed'
   /** The link target as written (pre-resolution), trimmed. */
   target: string
   /** Display alias after `|`, if present. */
   alias?: string | undefined
+}
+
+/** One referenceable list-item subtree in document order. */
+export interface ParsedBlock extends Span {
+  readonly ordinal: number
+  readonly kind: 'listItem'
+  readonly id: string | null
+  /** Exact `^id` source range, excluding its whitespace delimiter. */
+  readonly markerSpan: Span | null
+  /** Own lead paragraph/task range, in whole-file UTF-16 offsets. */
+  readonly leadFrom: number
+  readonly leadTo: number
+  /** Rendered own lead text with Markdown syntax and block marker removed. */
+  readonly text: string
+  /** Display-ready source subtree with every contained block marker removed. */
+  readonly markdown: string
+  /** Ancestor list labels, outermost first. */
+  readonly breadcrumbs: readonly string[]
 }
 
 /** A standard markdown link or autolink `[text](href)`. */
@@ -205,8 +225,9 @@ export interface ParsedTask extends TaskMarker {
  * 1 — Plan 03 baseline · 2 — `tasks: ParsedTask[]` (with `dueDate`) added (Plan 18) ·
  * 3 — tasks limited to round Meowdown `+ [ ]` / `+ [x]` syntax; square checklist
  * checkboxes are excluded.
- * 4 — task rows carry parent outline/list breadcrumbs. */
-export const PARSED_NOTE_VERSION = 4
+ * 4 — task rows carry parent outline/list breadcrumbs.
+ * 5 — list blocks and reference/embed wiki syntax are preserved. */
+export const PARSED_NOTE_VERSION = 5
 
 /** The full parse of one note — the stable contract downstream plans depend on. */
 export interface ParsedNote {
@@ -220,6 +241,8 @@ export interface ParsedNote {
   /** Set when YAML frontmatter failed to parse; the note is still usable. */
   frontmatterWarning?: string | undefined
   wikiLinks: WikiLink[]
+  /** Referenceable list items in document order. */
+  blocks: ParsedBlock[]
   links: MarkdownLink[]
   /** Body `#tag` names (without the leading `#`), deduped, in document order. */
   tags: string[]
