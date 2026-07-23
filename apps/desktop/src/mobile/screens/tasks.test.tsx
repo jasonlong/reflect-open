@@ -108,6 +108,11 @@ vi.mock('@/editor/note-editor', async () => {
           appendPendingReplacementText: () => {},
           acceptPendingReplacement: () => {},
           discardPendingReplacement: () => {},
+          getActiveBlock: () => null,
+          setActiveBlockId: () => false,
+          setBlockId: () => false,
+          revealBlock: () => false,
+          refreshMarkdownRendering: () => {},
         })
         return () => handleRef?.(null)
       }, [handleRef])

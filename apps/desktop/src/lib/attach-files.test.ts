@@ -48,6 +48,11 @@ function editorHandle(): NoteEditorHandle & {
     appendPendingReplacementText: () => {},
     acceptPendingReplacement: () => {},
     discardPendingReplacement: () => {},
+    getActiveBlock: () => null,
+    setActiveBlockId: () => false,
+    setBlockId: () => false,
+    revealBlock: () => false,
+    refreshMarkdownRendering: () => {},
   }
 }
 

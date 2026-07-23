@@ -50,6 +50,38 @@ afterEach(() => {
   vi.clearAllMocks()
 })
 
+describe('NoteEditor block identity adapter', () => {
+  it('inspects and addresses the active list item', async () => {
+    const handleRef = createRef<NoteEditorHandle>()
+    await render(
+      <NoteEditor initialContent="- Addressable block" handleRef={handleRef} />,
+    )
+    await pmRoot.getByText('Addressable block').click()
+
+    expect(handleRef.current?.getActiveBlock()).toEqual({
+      kind: 'listItem',
+      id: null,
+      ordinal: 0,
+      text: 'Addressable block',
+    })
+    expect(handleRef.current?.setActiveBlockId('alpha')).toBe(true)
+    expect(handleRef.current?.getMarkdown()).toBe('- Addressable block ^alpha\n')
+  })
+
+  it('assigns and reveals only a position-verified block', async () => {
+    const handleRef = createRef<NoteEditorHandle>()
+    await render(
+      <NoteEditor initialContent={'- First\n- Second'} handleRef={handleRef} />,
+    )
+    const locator = { ordinal: 1, expectedText: 'Second' }
+
+    expect(handleRef.current?.setBlockId(locator, 'beta')).toBe(true)
+    expect(handleRef.current?.getMarkdown()).toBe('- First\n- Second ^beta\n')
+    expect(handleRef.current?.revealBlock({ id: 'beta' })).toBe(true)
+    expect(handleRef.current?.setBlockId({ ...locator, expectedText: 'Moved' }, 'gamma')).toBe(false)
+  })
+})
+
 describe('NoteEditor markdown syntax mode', () => {
   it('hides markdown syntax by default', async () => {
     await render(<NoteEditor initialContent="Hello" />)

@@ -1,6 +1,6 @@
 # Plan 002: Add block identity and reveal support to Meowdown
 
-> **Executor instructions**: This is a two-repository plan. Implement and merge/release the Meowdown change first, then consume that release in Reflect. Follow each repository's instructions and keep the PRs separate. Run every verification command. If a STOP condition occurs, report instead of adding a Reflect-side workaround.
+> **Executor instructions**: This is a two-repository plan. Implement and release the generic Meowdown change from `jasonlong/meowdown`, then consume that fork-owned release in Reflect. Never open a PR or create a ref in `prosekit/meowdown`. Run every verification command. If a STOP condition occurs, report instead of adding a Reflect-side workaround.
 >
 > **Drift checks (run first)**:
 >
@@ -134,14 +134,14 @@ Before using ProseKit block-handle APIs beyond Meowdown's current usage, fetch c
 - Host-specific clipboard text or a “Copy block reference” button in Meowdown.
 - Addressable paragraphs/headings.
 - In-place editing through embeds.
-- A private fork, patch-package, vendored source, or Reflect-side parsing workaround.
+- Patch-package, vendored source, local path dependencies, Reflect-specific Meowdown internals, or any PR/ref in `prosekit/meowdown`.
 
 ## Git workflow
 
 1. Meowdown branch: `feat/block-identities`; conventional PR title such as `feat: preserve addressable list block IDs`.
-2. Push the branch only to a contributor fork. Never push directly to `prosekit/meowdown`; opening a cross-repository PR requires explicit user approval. A normal package release remains required before Reflect consumption.
-3. Reflect branch after the package is available: `chore/update-meowdown-block-identities` or combine with the first Reflect feature branch if maintainers prefer. Update all three Meowdown packages to one version.
-4. Push the Reflect branch only to `origin` and open a fork-local PR targeting `jasonlong/reflect-open:master`; never push to the upstream Reflect remote.
+2. Push only to `jasonlong/meowdown`. Never push or open a PR against `prosekit/meowdown`. Produce integrity-pinned package artifacts from the exact fork commit before Reflect consumption.
+3. Reflect work stays on `block-ref`. Pin all three Meowdown packages to the same fork snapshot and override transitive workspace edges to that snapshot.
+4. Push Reflect only to `jasonlong/reflect-open:block-ref`; keep fork `master` pristine and never push to the upstream Reflect remote.
 
 ## Steps
 
@@ -204,9 +204,9 @@ If ProseKit's generic split duplicates or loses attrs and cannot be corrected wi
 
 **Verify**: targeted tests pass in Chromium and WebKit where the existing suite supports browser projects.
 
-### Step 6: Review the upstream compatibility budget and release Meowdown
+### Step 6: Review the compatibility budget and release Meowdown from the fork
 
-Before opening the PR, verify the diff remains generic and narrowly additive:
+Before producing the fork release, verify the diff remains generic and narrowly additive:
 
 - no imports, labels, syntax assumptions, or styles named for Reflect;
 - one list-node attribute and focused converter/command helpers rather than a forked list extension;
@@ -215,9 +215,9 @@ Before opening the PR, verify the diff remains generic and narrowly additive:
 - no broad formatter/generated-file churn beyond the normal package release;
 - separate commits for source-model support and React-handle exposure if that improves upstream review.
 
-Update README/API docs. Run all Meowdown checks. Open the PR, wait for approval/CI, and release through the repository's normal release workflow. Record the released version in the Reflect PR description.
+Update README/API docs and run all Meowdown checks. Push to `jasonlong/meowdown:block-ref`, build package tarballs from the exact commit, and attach them to a fork-local prerelease. Record the commit and release tag in Reflect's dependency configuration.
 
-**Verify**: npm/package artifact contains the new types and behavior; no local path override is required.
+**Verify**: package artifacts contain the new types and behavior; the Reflect lockfile records remote URLs and integrity hashes, with no local path override.
 
 ### Step 7: Consume the release in Reflect
 
@@ -257,7 +257,7 @@ Use existing `list.test.ts`, converter tests, `move-block.test.ts`, `block-handl
 - [ ] Reflect consumes a released package version, not a workaround.
 - [ ] Reflect's wrapper exposes provider-neutral block methods and refresh.
 - [ ] All Meowdown checks and Reflect `pnpm check` pass.
-- [ ] Both PRs are ready for review/merged according to maintainer direction.
+- [ ] The Meowdown fork branch/release and Reflect `block-ref` commit are published only in `jasonlong` repositories.
 - [ ] `plans/README.md` status is updated.
 
 ## STOP conditions
@@ -273,4 +273,4 @@ Stop and report if:
 
 ## Maintenance notes
 
-Review the Meowdown change as a persistence change, not visual polish. Keep local `master` aligned with its upstream; push the topic branch only to a contributor fork. Do not push to the upstream repository, and pause for explicit user approval before any cross-repository PR. Any future list transform must preserve or deliberately delete `blockId`; tests should join the core list conformance suite. Reflect should never parse editor internals directly—the Markdown parser remains authoritative for indexing, and the editor API is only for current selection/mutation/reveal.
+Review the Meowdown change as a persistence change, not visual polish. Keep local `master` aligned with its upstream and push the topic branch only to `jasonlong/meowdown`. Do not push or open PRs in the upstream repository. Any future list transform must preserve or deliberately delete `blockId`; tests should join the core list conformance suite. Reflect should never parse editor internals directly—the Markdown parser remains authoritative for indexing, and the editor API is only for current selection/mutation/reveal.

@@ -59,6 +59,25 @@ type WikilinkHoverRenderer = (hit: WikilinkHoverHit) => ReactNode | Promise<Reac
  * programmatic replacement), so an external reload never loops back as an edit.
  */
 
+/** One list block inspected through Reflect's editor boundary. */
+export interface NoteEditorBlock {
+  readonly kind: 'listItem'
+  readonly id: string | null
+  readonly ordinal: number
+  readonly text: string
+}
+
+/** A stale-safe document-order locator for an indexed list block. */
+export interface NoteBlockLocator {
+  readonly ordinal: number
+  readonly expectedText: string
+}
+
+/** A unique ID or verified locator accepted by block reveal. */
+export type NoteBlockRevealTarget =
+  | { readonly id: string }
+  | { readonly ordinal: number; readonly expectedText: string }
+
 /** Imperative surface for note switching, reload, and save flushes. */
 export interface NoteEditorHandle {
   /**
@@ -97,6 +116,16 @@ export interface NoteEditorHandle {
   acceptPendingReplacement(options?: AcceptPendingReplacementOptions): void
   /** Clear the staged replacement without touching the document. */
   discardPendingReplacement(): void
+  /** Inspect the single list item containing the current selection. */
+  getActiveBlock(): NoteEditorBlock | null
+  /** Assign an ID to the active list item as one undoable edit. */
+  setActiveBlockId(id: string): boolean
+  /** Assign an ID only when the indexed locator still matches. */
+  setBlockId(target: NoteBlockLocator, id: string): boolean
+  /** Reveal a unique ID or stale-safe list-block locator. */
+  revealBlock(target: NoteBlockRevealTarget): boolean
+  /** Recompute syntax visibility after host-owned state changes. */
+  refreshMarkdownRendering(): void
 }
 
 interface NoteEditorProps {
@@ -286,6 +315,21 @@ export function NoteEditor({
         innerRef.current?.appendPendingReplacementText(text),
       acceptPendingReplacement: (options) => innerRef.current?.acceptPendingReplacement(options),
       discardPendingReplacement: () => innerRef.current?.discardPendingReplacement(),
+      getActiveBlock: () => {
+        const block = innerRef.current?.getActiveBlock() ?? null
+        return block === null
+          ? null
+          : {
+              kind: 'listItem',
+              id: block.id,
+              ordinal: block.ordinal,
+              text: block.text,
+            }
+      },
+      setActiveBlockId: (id) => innerRef.current?.setActiveBlockId(id) ?? false,
+      setBlockId: (target, id) => innerRef.current?.setBlockId(target, id) ?? false,
+      revealBlock: (target) => innerRef.current?.revealBlock(target) ?? false,
+      refreshMarkdownRendering: () => innerRef.current?.refreshMarkdownRendering(),
     }),
     [],
   )

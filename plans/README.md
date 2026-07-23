@@ -61,7 +61,7 @@ UX references:
 | Plan | Title | Priority | Effort | Risk | Depends on | Status |
 |---|---|---:|---:|---:|---|---|
 | [001](001-establish-block-addressing-contract.md) | Establish the Markdown block-addressing contract | P1 | M | MED | — | DONE |
-| [002](002-add-meowdown-block-identity-support.md) | Add block identity and reveal support to Meowdown | P1 | L | HIGH | 001 | TODO |
+| [002](002-add-meowdown-block-identity-support.md) | Add block identity and reveal support to Meowdown | P1 | L | HIGH | 001 | DONE |
 | [003](003-index-blocks-and-link-fragments.md) | Index blocks and resolve wiki-link fragments | P1 | L | HIGH | 001 | DONE |
 | [004](004-ship-block-navigation-and-backlinks.md) | Ship block navigation, copy actions, and backlinks | P1 | L | HIGH | 002, 003 | TODO |
 | [005](005-add-block-reference-picker.md) | Add a block picker and reference-authoring UX | P1 | L | HIGH | 002, 003, 004 | TODO |
@@ -81,7 +81,7 @@ Status values: `TODO` · `IN PROGRESS` · `DONE` · `BLOCKED (<reason>)` · `REJ
 ```
 
 - **001 is the public-format gate.** Do not implement downstream syntax until maintainers approve `docs/block-addressing.md` and its exact-first compatibility rules.
-- **002 is a separate first-party repository change.** Production editor support must land and release from `prosekit/meowdown`; do not patch/fork it in Reflect.
+- **002 is a separate repository change.** Generic editor support lives on `jasonlong/meowdown:block-ref` and is consumed from commit-pinned fork release artifacts; Reflect does not patch or vendor it.
 - **002 and 003 can run in parallel after 001.** They meet at 004.
 - **005 follows 004** and adds the source-side discovery/insertion workflow. **006 follows 005** so embed authoring reuses the same picker, stale guards, and on-demand ID minting.
 - Each schema plan appends the next migration number available at execution time. If another migration lands first, renumber the new migration and update `LATEST_SCHEMA_VERSION`; never edit shipped SQL.
@@ -158,7 +158,7 @@ Treat upstream compatibility as an architectural requirement:
 2. **Use one linear implementation branch and one completion commit per numbered plan.** Do not mix work from the next plan into the current plan's commit. Rebase on `upstream/master` only at clean plan boundaries, never mid-plan; re-run the next plan's drift check after a rebase.
 3. **Push only to the fork.** Push `master` and topic branches only to `origin` (`jasonlong/reflect-open`). Never run `git push upstream`, never create a branch/ref in `team-reflect/reflect-open`, and never use the upstream remote as a PR head. Open fork-local PRs against `jasonlong/reflect-open:master`. Creating a cross-repository upstream PR requires a separate explicit user instruction.
 4. **Keep one reviewable concern per plan commit.** Avoid broad renames, formatting sweeps, compatibility shims, duplicated resolver paths, or unrelated refactors that enlarge future conflicts. Push checkpoints only to `origin`; use one fork-local PR for the completed linear stack unless the user requests otherwise.
-5. **Make editor capabilities generic in Meowdown.** Develop Meowdown changes on a contributor fork and never push branches directly to `prosekit/meowdown`. Reflect should consume public released APIs; no patch-package, vendored editor, private package build, or undocumented ProseKit hook. Because a release may require an upstream PR, pause for explicit user approval before opening one.
+5. **Make editor capabilities generic in Meowdown.** Keep Meowdown changes on `jasonlong/meowdown:block-ref`; never push branches or open PRs in `prosekit/meowdown`. Reflect consumes integrity-pinned release artifacts from the fork—no patch-package, vendored editor, local path, or undocumented ProseKit hook.
 6. **Keep Reflect additions additive and isolated.** New parser/query helpers, components, hooks, and providers live in focused files; existing hotspots receive only narrow delegation/composition changes.
 7. **Rebase before creating a migration.** Use the next migration number after current upstream, regenerate DB types, and never modify an upstream migration. If numbering collides, renumber the unmerged migration during rebase.
 8. **Keep generated/release churn minimal.** Commit generated Kysely output only when schema changes require it; never edit versions, changelogs, release-please manifests, or generated Tauri projects manually.

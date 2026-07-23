@@ -46,6 +46,11 @@ function fakeEditor(): NoteEditorHandle & { applied: string[] } {
     appendPendingReplacementText: () => {},
     acceptPendingReplacement: () => {},
     discardPendingReplacement: () => {},
+    getActiveBlock: () => null,
+    setActiveBlockId: () => false,
+    setBlockId: () => false,
+    revealBlock: () => false,
+    refreshMarkdownRendering: () => {},
   }
 }
 
@@ -121,7 +126,14 @@ function installGraphFake({ files, linkSources, resolveTitleTo }: GraphFakeOptio
     if (command === 'db_query') {
       const sql = String((args as { sql: string }).sql)
       if (sql.includes('"links"')) {
-        return linkSources ? linkSources() : []
+        return linkSources
+          ? linkSources().map((row) => ({
+              ...row,
+              target_raw:
+                /!?\[\[([^\]|]+)/.exec(files[row.source_path] ?? '')?.[1] ?? '',
+              fragment_kind: null,
+            }))
+          : []
       }
       if (resolveTitleTo !== undefined && sql.includes('note_keys')) {
         return [{ note_path: resolveTitleTo }]

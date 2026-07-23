@@ -20,7 +20,11 @@ minimumReleaseAgeExclude:
   - prosemirror-flat-list
   - prosemirror-view
 
-# overrides:
-#   '@meowdown/core': https://pkg.pr.new/prosekit/meowdown/@meowdown/core@623bc43
-#   '@meowdown/react': https://pkg.pr.new/prosekit/meowdown/@meowdown/react@623bc43
-# blockExoticSubdeps: false
+# Keep the block-reference editor contract pinned to the fork commit that
+# produced these release assets. Direct dependencies and transitive workspace
+# edges must resolve to the same three-package snapshot.
+overrides:
+  '@meowdown/core': https://github.com/jasonlong/meowdown/releases/download/block-ref-snapshot-5475c37/meowdown-core-0.58.0.tgz
+  '@meowdown/markdown': https://github.com/jasonlong/meowdown/releases/download/block-ref-snapshot-5475c37/meowdown-markdown-0.58.0.tgz
+  '@meowdown/react': https://github.com/jasonlong/meowdown/releases/download/block-ref-snapshot-5475c37/meowdown-react-0.58.0.tgz
+blockExoticSubdeps: false

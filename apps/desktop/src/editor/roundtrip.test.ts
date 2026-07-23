@@ -10,6 +10,7 @@ describe('checkRoundTrip', () => {
       '| a | b |\n| --- | --- |\n| 1 | 2 |\n',
       '- item one\n- item two\n',
       '- [ ] buy milk\n- [x] done\n',
+      '- parent ^parent\n  1. nested child ^child\n+ [ ] round task ^round-task\n- [x] square task ^square-task\n',
       '<div>raw html</div>\n',
       'Title\n=====\n\nbody\n',
     ]
