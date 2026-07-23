@@ -65,7 +65,7 @@ UX references:
 | [003](003-index-blocks-and-link-fragments.md) | Index blocks and resolve wiki-link fragments | P1 | L | HIGH | 001 | DONE |
 | [004](004-ship-block-navigation-and-backlinks.md) | Ship block navigation, copy actions, and backlinks | P1 | L | HIGH | 002, 003 | DONE |
 | [005](005-add-block-reference-picker.md) | Add a block picker and reference-authoring UX | P1 | L | HIGH | 002, 003, 004 | DONE |
-| [006](006-add-read-only-block-transclusion.md) | Render and author read-only block transclusions | P1 | L | HIGH | 002, 003, 004, 005 | TODO |
+| [006](006-add-read-only-block-transclusion.md) | Render and author read-only block transclusions | P1 | L | HIGH | 002, 003, 004, 005 | DONE |
 
 Status values: `TODO` · `IN PROGRESS` · `DONE` · `BLOCKED (<reason>)` · `REJECTED (<reason>)`.
 

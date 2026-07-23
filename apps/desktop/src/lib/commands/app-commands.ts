@@ -10,6 +10,7 @@ import {
 import { attachFilesToNote } from '@/lib/attach-files'
 import {
   runCopyBlockDeepLink,
+  runCopyBlockEmbed,
   runCopyBlockReference,
 } from '@/lib/note-block-reference'
 import { runCopyDeepLink } from '@/lib/note-deep-link'
@@ -259,6 +260,12 @@ const APP_COMMANDS: AppCommand[] = [
     run: runCopyBlockReference,
   },
   {
+    id: 'note.copyBlockEmbed',
+    title: 'Copy block embed',
+    keywords: ['block', 'embed', 'transclusion', 'mirror', 'clipboard'],
+    run: runCopyBlockEmbed,
+  },
+  {
     id: 'note.copyBlockDeepLink',
     title: 'Copy block deep link',
     keywords: ['block', 'url', 'share', 'clipboard', 'reflect://'],
@@ -281,7 +288,17 @@ const APP_COMMANDS: AppCommand[] = [
     keywords: ['block', 'reference', 'link', 'bullet'],
     run: (context) => {
       if (context.notePath() !== null) {
-        context.openBlockPicker?.()
+        context.openBlockPicker?.('reference')
+      }
+    },
+  },
+  {
+    id: 'note.embedBlock',
+    title: 'Embed block…',
+    keywords: ['block', 'embed', 'transclusion', 'mirror', 'bullet'],
+    run: (context) => {
+      if (context.notePath() !== null) {
+        context.openBlockPicker?.('embed')
       }
     },
   },

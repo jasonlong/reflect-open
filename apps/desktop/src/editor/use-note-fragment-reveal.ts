@@ -42,20 +42,26 @@ export function useNoteFragmentReveal({
     consumedArrival.current = arrival
 
     const fragment = addressed.fragment
-    const revealed =
-      fragment.kind === 'heading'
-        ? editor.revealHeading(fragment.value)
-        : fragment.kind === 'block'
-          ? editor.revealBlock({ id: fragment.id })
-          : editor.revealBlock({
+    const revealed = fragment.kind === 'heading'
+      ? editor.revealHeading(fragment.value)
+      : fragment.kind === 'block'
+        ? editor.revealBlock({ id: fragment.id })
+        : fragment.kind === 'blockPosition'
+          ? editor.revealBlock({
               ordinal: fragment.ordinal,
               expectedText: fragment.expectedText,
+            })
+          : editor.revealWikiEmbed({
+              ordinal: fragment.ordinal,
+              expectedTarget: fragment.expectedTarget,
             })
     if (!revealed) {
       startOperation('Opening link').warn(
         fragment.kind === 'heading'
           ? 'That heading is no longer available.'
-          : 'That block is no longer available.',
+          : fragment.kind === 'wikiEmbedPosition'
+            ? 'That transclusion moved or is no longer available.'
+            : 'That block is no longer available.',
       )
     }
   }, [arrivalSeq, editor, entryId, path, ready, route])

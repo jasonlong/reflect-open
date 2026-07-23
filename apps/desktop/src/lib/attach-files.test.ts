@@ -40,6 +40,7 @@ function editorHandle(): NoteEditorHandle & {
     getMarkdown: () => '',
     setMarkdown: () => {},
     insertMarkdown: vi.fn<(markdown: string) => void>(),
+    insertBlockEmbed: () => false,
     focus: () => {},
     setSelection: () => {},
     getSelectedText: () => '',
@@ -53,6 +54,7 @@ function editorHandle(): NoteEditorHandle & {
     setBlockId: () => false,
     revealHeading: () => false,
     revealBlock: () => false,
+    revealWikiEmbed: () => false,
     refreshMarkdownRendering: () => {},
   }
 }

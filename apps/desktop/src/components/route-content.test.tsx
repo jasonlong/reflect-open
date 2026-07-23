@@ -26,6 +26,10 @@ const editorProbe = vi.hoisted(() => ({
   hoverRenderer: null as boolean | null,
 }))
 
+vi.mock('@/editor/use-block-slash-items', () => ({
+  useBlockSlashItems: () => async () => [],
+}))
+
 vi.mock('@/editor/note-editor', async () => {
   const { useEffect, useRef } = await import('react')
   return {
@@ -53,6 +57,7 @@ vi.mock('@/editor/note-editor', async () => {
           },
           getMarkdown: () => markdownRef.current,
           insertMarkdown: () => {},
+          insertBlockEmbed: () => false,
           focus: () => editorProbe.focusCalls.push('focus'),
           setSelection: () => {},
           getSelectedText: () => '',
@@ -66,6 +71,7 @@ vi.mock('@/editor/note-editor', async () => {
           setBlockId: () => false,
           revealHeading: () => false,
           revealBlock: () => false,
+          revealWikiEmbed: () => false,
           refreshMarkdownRendering: () => {},
         })
         return () => handleRef?.(null)

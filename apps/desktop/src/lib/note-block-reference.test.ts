@@ -12,8 +12,10 @@ import {
   blockReferenceLabel,
   ensureActiveBlockAddress,
   ensureBlockAddress,
+  formatBlockAddressEmbed,
   formatBlockAddressReference,
   formatBlockReference,
+  runCopyBlockEmbed,
   runCopyBlockReference,
 } from './note-block-reference'
 
@@ -83,6 +85,7 @@ function installEditor(options?: {
     getMarkdown: () => markdown,
     setMarkdown: () => {},
     insertMarkdown: () => {},
+    insertBlockEmbed: () => false,
     focus: () => {},
     setSelection: () => {},
     getSelectedText: () => '',
@@ -96,6 +99,7 @@ function installEditor(options?: {
     setBlockId: (_locator, id) => setActiveBlockId(id),
     revealHeading: () => false,
     revealBlock: () => false,
+    revealWikiEmbed: () => false,
     refreshMarkdownRendering: () => {},
   }
   const session: NoteSession = {
@@ -298,6 +302,11 @@ describe('runCopyBlockReference', () => {
 
     await runCopyBlockReference(context())
     expect(writeText).toHaveBeenCalledWith('[[Project#^alpha|Keep Markdown]]')
+    expect(formatBlockAddressEmbed({ noteAddress: 'Project', id: 'alpha' })).toBe(
+      '![[Project#^alpha]]',
+    )
+    await runCopyBlockEmbed(context())
+    expect(writeText).toHaveBeenLastCalledWith('![[Project#^alpha]]')
 
     writeText.mockRejectedValueOnce(new Error('denied'))
     await expect(runCopyBlockReference(context())).resolves.toBeUndefined()

@@ -38,6 +38,7 @@ function fakeEditor(): NoteEditorHandle & { applied: string[] } {
     },
     getMarkdown: () => '',
     insertMarkdown: () => {},
+    insertBlockEmbed: () => false,
     focus: () => {},
     setSelection: () => {},
     getSelectedText: () => '',
@@ -51,6 +52,7 @@ function fakeEditor(): NoteEditorHandle & { applied: string[] } {
     setBlockId: () => false,
     revealHeading: () => false,
     revealBlock: () => false,
+    revealWikiEmbed: () => false,
     refreshMarkdownRendering: () => {},
   }
 }

@@ -18,6 +18,13 @@ vi.mock('@/lib/deep-links/intake', () => ({
   dispatchDeepLink: vi.fn(),
 }))
 
+vi.mock('@/components/blocks/block-transclusion', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/components/blocks/block-transclusion')>()),
+  BlockTransclusion: ({ target }: { target: string }) => (
+    <span data-testid="block-transclusion">{target}</span>
+  ),
+}))
+
 const openDeepLinkInNewWindow = vi.hoisted(() => vi.fn<() => Promise<boolean>>())
 vi.mock('@/lib/windows/open-in-new-window', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/windows/open-in-new-window')>()),
@@ -90,6 +97,27 @@ describe('NoteEditor block identity adapter', () => {
     expect(handleRef.current?.getMarkdown()).toBe('- First\n- Second ^beta\n')
     expect(handleRef.current?.revealBlock({ id: 'beta' })).toBe(true)
     expect(handleRef.current?.setBlockId({ ...locator, expectedText: 'Moved' }, 'gamma')).toBe(false)
+  })
+})
+
+describe('NoteEditor block transclusion adapter', () => {
+  it('classifies and renders a standalone block embed through the host slot', async () => {
+    await render(<NoteEditor initialContent="![[Plan#^alpha]]" />)
+    await expect.element(page.getByTestId('block-transclusion')).toHaveTextContent('Plan#^alpha')
+  })
+
+  it('inserts and reveals a position-verified block embed', async () => {
+    const handleRef = createRef<NoteEditorHandle>()
+    await render(<NoteEditor initialContent="" handleRef={handleRef} />)
+
+    expect(handleRef.current?.insertBlockEmbed('![[Plan#^alpha]]', true)).toBe(true)
+    expect(handleRef.current?.getMarkdown()).toBe('![[Plan#^alpha]]\n')
+    expect(
+      handleRef.current?.revealWikiEmbed({ ordinal: 0, expectedTarget: 'Plan#^alpha' }),
+    ).toBe(true)
+    expect(
+      handleRef.current?.revealWikiEmbed({ ordinal: 0, expectedTarget: 'Plan#^other' }),
+    ).toBe(false)
   })
 })
 

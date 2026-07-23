@@ -23,6 +23,28 @@ export interface BlockSearchOptions {
   readonly limit?: number
 }
 
+/** Source or resolved transclusion occurrence for one canonical block. */
+export type BlockEmbedPlace =
+  | {
+      readonly kind: 'source'
+      readonly path: string
+      readonly noteTitle: string
+      readonly breadcrumbs: readonly string[]
+    }
+  | {
+      readonly kind: 'transclusion'
+      readonly path: string
+      readonly noteTitle: string
+      readonly breadcrumbs: readonly string[]
+      readonly embedOrdinal: number
+      readonly expectedTarget: string
+    }
+
+export interface BlockEmbedPlacesResult {
+  readonly total: number
+  readonly places: readonly BlockEmbedPlace[]
+}
+
 /** One current list-block projection. Markdown remains the durable authority. */
 export interface BlockProjection {
   readonly notePath: string
@@ -180,6 +202,88 @@ export async function getBlockById(notePath: string, blockId: string): Promise<B
   return row === undefined
     ? { kind: 'missing', notePath, blockId }
     : { kind: 'resolved', block: toBlockProjection(row) }
+}
+
+/** Return the source plus bounded, uniquely resolved embed occurrences for a block. */
+export async function getBlockEmbedPlaces(
+  notePath: string,
+  blockId: string,
+  limit = 100,
+): Promise<BlockEmbedPlacesResult> {
+  const boundedLimit = Math.min(100, Math.max(1, Math.trunc(limit)))
+  const [targetNote, targetBlock, rows] = await Promise.all([
+    db.selectFrom('notes').where('path', '=', notePath).select(['title']).executeTakeFirst(),
+    getBlockById(notePath, blockId),
+    db
+      .selectFrom('blockEmbedPlaces')
+      .innerJoin('notes', 'notes.path', 'blockEmbedPlaces.sourcePath')
+      .where('blockEmbedPlaces.targetPath', '=', notePath)
+      .where('blockEmbedPlaces.blockId', '=', blockId)
+      .select([
+        'blockEmbedPlaces.sourcePath',
+        'blockEmbedPlaces.targetRaw',
+        'blockEmbedPlaces.posFrom',
+        'blockEmbedPlaces.embedOrdinal',
+        'notes.title as noteTitle',
+      ])
+      .orderBy('blockEmbedPlaces.sourcePath')
+      .orderBy('blockEmbedPlaces.posFrom')
+      .limit(boundedLimit)
+      .execute(),
+  ])
+
+  if (targetNote === undefined || targetBlock.kind !== 'resolved') {
+    return { total: 0, places: [] }
+  }
+
+  const sourcePaths = [...new Set(rows.flatMap((row) => row.sourcePath ?? []))]
+  const contextRows = sourcePaths.length === 0
+    ? []
+    : await db
+        .selectFrom('blocks')
+        .where('notePath', 'in', sourcePaths)
+        .select(['notePath', 'posFrom', 'posTo', 'text', 'breadcrumbs'])
+        .execute()
+
+  const places: BlockEmbedPlace[] = [
+    {
+      kind: 'source',
+      path: notePath,
+      noteTitle: targetNote.title,
+      breadcrumbs: targetBlock.block.breadcrumbs,
+    },
+  ]
+  for (const row of rows) {
+    if (
+      row.sourcePath === null ||
+      row.targetRaw === null ||
+      row.posFrom === null ||
+      row.embedOrdinal === null
+    ) {
+      continue
+    }
+    const sourcePath = row.sourcePath
+    const position = row.posFrom
+    const containing = contextRows
+      .filter(
+        (block) =>
+          block.notePath === sourcePath &&
+          block.posFrom <= position &&
+          block.posTo >= position,
+      )
+      .sort((left, right) => (left.posTo - left.posFrom) - (right.posTo - right.posFrom))[0]
+    places.push({
+      kind: 'transclusion',
+      path: sourcePath,
+      noteTitle: row.noteTitle,
+      breadcrumbs: containing === undefined
+        ? []
+        : [...decodeBlockBreadcrumbs(containing.breadcrumbs), containing.text],
+      embedOrdinal: Number(row.embedOrdinal),
+      expectedTarget: row.targetRaw,
+    })
+  }
+  return { total: places.length, places }
 }
 
 /**

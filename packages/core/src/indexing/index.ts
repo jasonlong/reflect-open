@@ -68,8 +68,11 @@ export {
 } from './indexer'
 export {
   getBlockById,
+  getBlockEmbedPlaces,
   searchBlocks,
   resolveWikiAddress,
+  type BlockEmbedPlace,
+  type BlockEmbedPlacesResult,
   type BlockLookup,
   type BlockProjection,
   type BlockSearchOptions,

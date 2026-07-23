@@ -30,13 +30,13 @@ export function deepLinkForRoute(route: Route): string | null {
     case 'tasks':
       return `${DEEP_LINK_SCHEME}://tasks`
     case 'daily':
-      return route.fragment?.kind === 'blockPosition'
+      return route.fragment?.kind === 'blockPosition' || route.fragment?.kind === 'wikiEmbedPosition'
         ? null
         : dailyDeepLink(route.date, route.fragment)
     case 'search':
       return `${DEEP_LINK_SCHEME}://search?q=${encodeURIComponent(route.query)}`
     case 'note':
-      return route.fragment?.kind === 'blockPosition'
+      return route.fragment?.kind === 'blockPosition' || route.fragment?.kind === 'wikiEmbedPosition'
         ? null
         : noteDeepLink(route.path, route.fragment)
     case 'allNotes':

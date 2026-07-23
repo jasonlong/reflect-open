@@ -16,6 +16,7 @@
 - **Risk**: HIGH
 - **Depends on**: `plans/002-add-meowdown-block-identity-support.md`, `plans/003-index-blocks-and-link-fragments.md`, `plans/004-ship-block-navigation-and-backlinks.md`, `plans/005-add-block-reference-picker.md`
 - **Category**: direction
+- **Completion**: DONE on the fork-local linear `block-ref` stacks; no upstream refs or PRs were created.
 - **Planned at**: Reflect commit `cedba83c`, 2026-07-22; Meowdown 0.57.0 surveyed at `35390be`
 
 ## Why this matters
@@ -118,11 +119,9 @@ Fetch current ProseKit and Meowdown API docs before implementing new node/mark v
 
 ## Git workflow
 
-1. Rebase both repositories on their upstream `master` branches before starting.
-2. Meowdown branch: `feat/block-embed-rendering`; push only to a contributor fork. Never push to `prosekit/meowdown`; pause for explicit user approval before opening a cross-repository PR, then release normally if maintainers accept it.
-3. Reflect branch after release: `feat/block-transclusion`; push only to `origin` and use a fork-local PR targeting `jasonlong/reflect-open:master`.
-4. Use user-visible conventional titles, e.g. `feat: render referenced note blocks inline`.
-5. Push/open ready PRs and wait for CI/review blockers in each repository.
+- Meowdown work remains on `jasonlong/meowdown:block-ref` and is consumed through a fork-local release snapshot.
+- Reflect work remains linear on `jasonlong/reflect-open:block-ref`; fork `master` stays pristine.
+- Push only those fork branches. Do not create upstream refs or pull requests.
 
 ## Steps
 

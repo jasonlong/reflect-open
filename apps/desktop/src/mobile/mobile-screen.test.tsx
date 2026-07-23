@@ -35,6 +35,10 @@ const editorProbe = vi.hoisted(() => ({
 }))
 const hapticImpactLight = vi.hoisted(() => vi.fn())
 
+vi.mock('@/editor/use-block-slash-items', () => ({
+  useBlockSlashItems: () => async () => [],
+}))
+
 vi.mock('@/editor/note-editor', async () => {
   const { useEffect, useRef } = await import('react')
   return {
@@ -55,6 +59,7 @@ vi.mock('@/editor/note-editor', async () => {
           },
           getMarkdown: () => markdownRef.current,
           insertMarkdown: () => {},
+          insertBlockEmbed: () => false,
           focus: () => {
             editorProbe.focusCalls += 1
           },
@@ -72,6 +77,7 @@ vi.mock('@/editor/note-editor', async () => {
           setBlockId: () => false,
           revealHeading: () => false,
           revealBlock: () => false,
+          revealWikiEmbed: () => false,
           refreshMarkdownRendering: () => {},
         })
         return () => handleRef?.(null)

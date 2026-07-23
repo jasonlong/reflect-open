@@ -6,9 +6,9 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  '@meowdown/core': https://github.com/jasonlong/meowdown/releases/download/block-ref-snapshot-5475c37/meowdown-core-0.58.0.tgz
-  '@meowdown/markdown': https://github.com/jasonlong/meowdown/releases/download/block-ref-snapshot-5475c37/meowdown-markdown-0.58.0.tgz
-  '@meowdown/react': https://github.com/jasonlong/meowdown/releases/download/block-ref-snapshot-5475c37/meowdown-react-0.58.0.tgz
+  '@meowdown/core': https://github.com/jasonlong/meowdown/releases/download/block-ref-snapshot-85726fc/meowdown-core-0.58.0.tgz
+  '@meowdown/markdown': https://github.com/jasonlong/meowdown/releases/download/block-ref-snapshot-85726fc/meowdown-markdown-0.58.0.tgz
+  '@meowdown/react': https://github.com/jasonlong/meowdown/releases/download/block-ref-snapshot-85726fc/meowdown-react-0.58.0.tgz
 
 importers:
 
@@ -42,11 +42,11 @@ importers:
         specifier: ^3.2.2
         version: 3.2.2(react@19.2.7)
       '@meowdown/core':
-        specifier: https://github.com/jasonlong/meowdown/releases/download/block-ref-snapshot-5475c37/meowdown-core-0.58.0.tgz
-        version: https://github.com/jasonlong/meowdown/releases/download/block-ref-snapshot-5475c37/meowdown-core-0.58.0.tgz(@lezer/common@1.5.2)(@shikijs/types@4.3.1)(@types/hast@3.0.4)(prosemirror-model@1.25.11)(prosemirror-state@1.4.4)(prosemirror-transform@1.12.0)(prosemirror-view@1.42.1)
+        specifier: https://github.com/jasonlong/meowdown/releases/download/block-ref-snapshot-85726fc/meowdown-core-0.58.0.tgz
+        version: https://github.com/jasonlong/meowdown/releases/download/block-ref-snapshot-85726fc/meowdown-core-0.58.0.tgz(@lezer/common@1.5.2)(@shikijs/types@4.3.1)(@types/hast@3.0.4)(prosemirror-model@1.25.11)(prosemirror-state@1.4.4)(prosemirror-transform@1.12.0)(prosemirror-view@1.42.1)
       '@meowdown/react':
-        specifier: https://github.com/jasonlong/meowdown/releases/download/block-ref-snapshot-5475c37/meowdown-react-0.58.0.tgz
-        version: https://github.com/jasonlong/meowdown/releases/download/block-ref-snapshot-5475c37/meowdown-react-0.58.0.tgz(@lezer/common@1.5.2)(@lezer/highlight@1.2.3)(@shikijs/types@4.3.1)(@types/hast@3.0.4)(@types/react@19.2.17)(date-fns@4.4.0)(prosemirror-model@1.25.11)(prosemirror-state@1.4.4)(prosemirror-transform@1.12.0)(prosemirror-view@1.42.1)(react-dom@19.2.7)(react@19.2.7)
+        specifier: https://github.com/jasonlong/meowdown/releases/download/block-ref-snapshot-85726fc/meowdown-react-0.58.0.tgz
+        version: https://github.com/jasonlong/meowdown/releases/download/block-ref-snapshot-85726fc/meowdown-react-0.58.0.tgz(@lezer/common@1.5.2)(@lezer/highlight@1.2.3)(@shikijs/types@4.3.1)(@types/hast@3.0.4)(@types/react@19.2.17)(date-fns@4.4.0)(prosemirror-model@1.25.11)(prosemirror-state@1.4.4)(prosemirror-transform@1.12.0)(prosemirror-view@1.42.1)(react-dom@19.2.7)(react@19.2.7)
       '@reflect/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -262,8 +262,8 @@ importers:
         specifier: ^3.0.84
         version: 3.0.84(zod@4.4.3)
       '@meowdown/markdown':
-        specifier: https://github.com/jasonlong/meowdown/releases/download/block-ref-snapshot-5475c37/meowdown-markdown-0.58.0.tgz
-        version: https://github.com/jasonlong/meowdown/releases/download/block-ref-snapshot-5475c37/meowdown-markdown-0.58.0.tgz
+        specifier: https://github.com/jasonlong/meowdown/releases/download/block-ref-snapshot-85726fc/meowdown-markdown-0.58.0.tgz
+        version: https://github.com/jasonlong/meowdown/releases/download/block-ref-snapshot-85726fc/meowdown-markdown-0.58.0.tgz
       '@reflect/db':
         specifier: workspace:*
         version: link:../db
@@ -1073,16 +1073,16 @@ packages:
   '@marijn/find-cluster-break@1.0.3':
     resolution: {integrity: sha512-FY+MKLBoTsLNJF/eLWaOsXGdz6uh3Iu1axjPf6TUq92IYumcTcXWHoS747JARLkcdlJ/Waiaxc5wQfFO8jC6NA==}
 
-  '@meowdown/core@https://github.com/jasonlong/meowdown/releases/download/block-ref-snapshot-5475c37/meowdown-core-0.58.0.tgz':
-    resolution: {integrity: sha512-Gibduy+YoaComJPZy23cblQeX7l7ufVEL2VHDbFz0m+YXwhZugFJGci1G8MvtCZs7zG4HXWO2gJXjZGq3PXjMg==, tarball: https://github.com/jasonlong/meowdown/releases/download/block-ref-snapshot-5475c37/meowdown-core-0.58.0.tgz}
+  '@meowdown/core@https://github.com/jasonlong/meowdown/releases/download/block-ref-snapshot-85726fc/meowdown-core-0.58.0.tgz':
+    resolution: {integrity: sha512-py1AOJr1yjYigbUzvClWVCNRFaWlrJFdBl2SIo24T905yCE+2P+onmZXzFUEKlDXf1jOwPT3t6GQyIIcg2dg3A==, tarball: https://github.com/jasonlong/meowdown/releases/download/block-ref-snapshot-85726fc/meowdown-core-0.58.0.tgz}
     version: 0.58.0
 
-  '@meowdown/markdown@https://github.com/jasonlong/meowdown/releases/download/block-ref-snapshot-5475c37/meowdown-markdown-0.58.0.tgz':
-    resolution: {integrity: sha512-eEwxZ3S4s5sLzcxows3qONxFaXXWuZoY/L5hDFagUm3alcUsm6FoAmUm8X1sV4m6oNCqe2n240aL1gQLrYnUiA==, tarball: https://github.com/jasonlong/meowdown/releases/download/block-ref-snapshot-5475c37/meowdown-markdown-0.58.0.tgz}
+  '@meowdown/markdown@https://github.com/jasonlong/meowdown/releases/download/block-ref-snapshot-85726fc/meowdown-markdown-0.58.0.tgz':
+    resolution: {integrity: sha512-eEwxZ3S4s5sLzcxows3qONxFaXXWuZoY/L5hDFagUm3alcUsm6FoAmUm8X1sV4m6oNCqe2n240aL1gQLrYnUiA==, tarball: https://github.com/jasonlong/meowdown/releases/download/block-ref-snapshot-85726fc/meowdown-markdown-0.58.0.tgz}
     version: 0.58.0
 
-  '@meowdown/react@https://github.com/jasonlong/meowdown/releases/download/block-ref-snapshot-5475c37/meowdown-react-0.58.0.tgz':
-    resolution: {integrity: sha512-Q+Dkz2xDZhJo/3qO6Z/iAT3RVH1+UT3n6MvuIWgOSew6n0unShVkPFZKaNqBf5eHOLccwcsIYc/orTAl71xNlQ==, tarball: https://github.com/jasonlong/meowdown/releases/download/block-ref-snapshot-5475c37/meowdown-react-0.58.0.tgz}
+  '@meowdown/react@https://github.com/jasonlong/meowdown/releases/download/block-ref-snapshot-85726fc/meowdown-react-0.58.0.tgz':
+    resolution: {integrity: sha512-Ut0F5m0/4VO/Aq0OVhJcl7ghC0dWGpj11L8KKy5+Us0Mt3mUwWZh3CbzVb5A2erScrPBQRcpvOfNpR/X/bUMzw==, tarball: https://github.com/jasonlong/meowdown/releases/download/block-ref-snapshot-85726fc/meowdown-react-0.58.0.tgz}
     version: 0.58.0
     peerDependencies:
       react: ^19.0.0
@@ -7219,13 +7219,13 @@ snapshots:
 
   '@marijn/find-cluster-break@1.0.3': {}
 
-  '@meowdown/core@https://github.com/jasonlong/meowdown/releases/download/block-ref-snapshot-5475c37/meowdown-core-0.58.0.tgz(@lezer/common@1.5.2)(@shikijs/types@4.3.1)(@types/hast@3.0.4)(prosemirror-model@1.25.11)(prosemirror-state@1.4.4)(prosemirror-transform@1.12.0)(prosemirror-view@1.42.1)':
+  '@meowdown/core@https://github.com/jasonlong/meowdown/releases/download/block-ref-snapshot-85726fc/meowdown-core-0.58.0.tgz(@lezer/common@1.5.2)(@shikijs/types@4.3.1)(@types/hast@3.0.4)(prosemirror-model@1.25.11)(prosemirror-state@1.4.4)(prosemirror-transform@1.12.0)(prosemirror-view@1.42.1)':
     dependencies:
       '@codemirror/language': 6.12.4
       '@codemirror/language-data': 6.5.2
       '@floating-ui/dom': 1.8.0
       '@lezer/highlight': 1.2.3
-      '@meowdown/markdown': https://github.com/jasonlong/meowdown/releases/download/block-ref-snapshot-5475c37/meowdown-markdown-0.58.0.tgz
+      '@meowdown/markdown': https://github.com/jasonlong/meowdown/releases/download/block-ref-snapshot-85726fc/meowdown-markdown-0.58.0.tgz
       '@ocavue/utils': 1.7.0
       '@prosekit/core': 0.13.0-beta.6(prosemirror-model@1.25.11)(prosemirror-state@1.4.4)(prosemirror-transform@1.12.0)
       '@prosekit/extensions': 0.18.0-beta.17(@lezer/common@1.5.2)(@lezer/highlight@1.2.3)(@shikijs/types@4.3.1)(@types/hast@3.0.4)(prosemirror-model@1.25.11)(prosemirror-state@1.4.4)(prosemirror-transform@1.12.0)(prosemirror-view@1.42.1)
@@ -7262,15 +7262,15 @@ snapshots:
       - y-prosemirror
       - yjs
 
-  '@meowdown/markdown@https://github.com/jasonlong/meowdown/releases/download/block-ref-snapshot-5475c37/meowdown-markdown-0.58.0.tgz':
+  '@meowdown/markdown@https://github.com/jasonlong/meowdown/releases/download/block-ref-snapshot-85726fc/meowdown-markdown-0.58.0.tgz':
     dependencies:
       '@lezer/common': 1.5.2
       '@lezer/markdown': 1.7.2
 
-  '@meowdown/react@https://github.com/jasonlong/meowdown/releases/download/block-ref-snapshot-5475c37/meowdown-react-0.58.0.tgz(@lezer/common@1.5.2)(@lezer/highlight@1.2.3)(@shikijs/types@4.3.1)(@types/hast@3.0.4)(@types/react@19.2.17)(date-fns@4.4.0)(prosemirror-model@1.25.11)(prosemirror-state@1.4.4)(prosemirror-transform@1.12.0)(prosemirror-view@1.42.1)(react-dom@19.2.7)(react@19.2.7)':
+  '@meowdown/react@https://github.com/jasonlong/meowdown/releases/download/block-ref-snapshot-85726fc/meowdown-react-0.58.0.tgz(@lezer/common@1.5.2)(@lezer/highlight@1.2.3)(@shikijs/types@4.3.1)(@types/hast@3.0.4)(@types/react@19.2.17)(date-fns@4.4.0)(prosemirror-model@1.25.11)(prosemirror-state@1.4.4)(prosemirror-transform@1.12.0)(prosemirror-view@1.42.1)(react-dom@19.2.7)(react@19.2.7)':
     dependencies:
       '@base-ui/react': 1.6.0(@types/react@19.2.17)(date-fns@4.4.0)(react-dom@19.2.7)(react@19.2.7)
-      '@meowdown/core': https://github.com/jasonlong/meowdown/releases/download/block-ref-snapshot-5475c37/meowdown-core-0.58.0.tgz(@lezer/common@1.5.2)(@shikijs/types@4.3.1)(@types/hast@3.0.4)(prosemirror-model@1.25.11)(prosemirror-state@1.4.4)(prosemirror-transform@1.12.0)(prosemirror-view@1.42.1)
+      '@meowdown/core': https://github.com/jasonlong/meowdown/releases/download/block-ref-snapshot-85726fc/meowdown-core-0.58.0.tgz(@lezer/common@1.5.2)(@shikijs/types@4.3.1)(@types/hast@3.0.4)(prosemirror-model@1.25.11)(prosemirror-state@1.4.4)(prosemirror-transform@1.12.0)(prosemirror-view@1.42.1)
       '@ocavue/utils': 1.7.0
       '@prosekit/core': 0.13.0-beta.6(prosemirror-model@1.25.11)(prosemirror-state@1.4.4)(prosemirror-transform@1.12.0)
       '@prosekit/pm': 0.1.19-beta.3

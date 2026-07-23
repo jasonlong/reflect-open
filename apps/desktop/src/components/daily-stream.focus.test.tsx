@@ -57,6 +57,7 @@ vi.mock('@/components/note-pane', () => ({
         getMarkdown: () => '',
         setMarkdown: () => {},
         insertMarkdown: () => {},
+        insertBlockEmbed: () => false,
         focus: () => {
           focusLog.calls.push(`focus:${dailyDate}`)
         },
@@ -74,6 +75,7 @@ vi.mock('@/components/note-pane', () => ({
         setBlockId: () => false,
         revealHeading: () => false,
         revealBlock: () => false,
+        revealWikiEmbed: () => false,
         refreshMarkdownRendering: () => {},
       })
       return () => registerHandle(dailyDate, null)

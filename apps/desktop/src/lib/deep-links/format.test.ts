@@ -39,6 +39,13 @@ describe('deepLinkForRoute', () => {
         fragment: { kind: 'blockPosition', ordinal: 1, expectedText: 'Target' },
       }),
     ).toBeNull()
+    expect(
+      deepLinkForRoute({
+        kind: 'note',
+        path: 'notes/a.md',
+        fragment: { kind: 'wikiEmbedPosition', ordinal: 1, expectedTarget: 'Plan#^alpha' },
+      }),
+    ).toBeNull()
   })
 })
 

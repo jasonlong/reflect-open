@@ -10,13 +10,11 @@ import {
 import { openUrl } from '@tauri-apps/plugin-opener'
 import { errorMessage, type TimeFormat } from '@reflect/core'
 import {
-  type AcceptPendingReplacementOptions,
   type ExitBoundaryHandler,
   type FileClickHandler,
   type FileInfoResolver,
   type FileLinkResolver,
   type MarkMode,
-  type StartPendingReplacementOptions,
   type WikilinkHoverHit,
 } from '@meowdown/core'
 import {
@@ -28,12 +26,9 @@ import {
   type SlashMenuSearchHandler,
   type TagSearchHandler,
   type WikilinkSearchHandler,
+  type WikiBlockEmbedRenderProps,
 } from '@meowdown/react'
-import type {
-  NoteBlockLocator,
-  NoteBlockRevealTarget,
-  NoteEditorBlock,
-} from '@/editor/note-editor-blocks'
+import { BlockTransclusion, resolveReflectWikiEmbed } from '@/components/blocks/block-transclusion'
 import { EditorInputTraits } from '@/editor/editor-input-traits'
 import { FormattingToolbarBridge } from '@/editor/formatting-toolbar-bridge'
 import {
@@ -70,57 +65,8 @@ export type {
   NoteEditorBlock,
 } from '@/editor/note-editor-blocks'
 
-/** Imperative surface for note switching, reload, and save flushes. */
-export interface NoteEditorHandle {
-  /**
-   * Reconcile pending native input, then serialize the current document to
-   * Markdown. If reconciliation changes the document, `onChange` may run
-   * synchronously before this method returns.
-   */
-  getMarkdown(): string
-  /** Replace the document (note switch / external reload). */
-  setMarkdown(markdown: string): void
-  /**
-   * Insert a parsed markdown fragment at the cursor as one undoable edit —
-   * how commands add content to the focused note (Insert template…,
-   * Attach file…). An active selection collapses first and is never deleted:
-   * these are host-initiated inserts, not pastes. Unlike {@link setMarkdown},
-   * this fires `onChange`, so the insertion flows into the save pipeline like
-   * typing. Empty/whitespace-only markdown is a no-op.
-   */
-  insertMarkdown(markdown: string): void
-  focus(): void
-  /**
-   * Move the caret to a document edge and scroll it into view. Used for
-   * cross-note arrow navigation in the daily stream (jump to the end of the
-   * previous day / the start of the next day).
-   */
-  setSelection(position: 'start' | 'end'): void
-  /** The current selection's text (blocks separated by blank lines). */
-  getSelectedText(): string
-  /** Open the selection AI menu (no-op on an empty selection). */
-  openSelectionMenu(): void
-  /** Stage a pending replacement over a range; false when the range is invalid. */
-  startPendingReplacement(options: StartPendingReplacementOptions): boolean
-  /** Append streamed text to the staged replacement's preview. */
-  appendPendingReplacementText(text: string): void
-  /** Apply the staged replacement as one edit; `mode` overrides its placement. */
-  acceptPendingReplacement(options?: AcceptPendingReplacementOptions): void
-  /** Clear the staged replacement without touching the document. */
-  discardPendingReplacement(): void
-  /** Inspect the single list item containing the current selection. */
-  getActiveBlock(): NoteEditorBlock | null
-  /** Assign an ID to the active list item as one undoable edit. */
-  setActiveBlockId(id: string): boolean
-  /** Assign an ID only when the indexed locator still matches. */
-  setBlockId(target: NoteBlockLocator, id: string): boolean
-  /** Reveal a heading by its rendered text. */
-  revealHeading(heading: string): boolean
-  /** Reveal a unique ID or stale-safe list-block locator. */
-  revealBlock(target: NoteBlockRevealTarget): boolean
-  /** Recompute syntax visibility after host-owned state changes. */
-  refreshMarkdownRendering(): void
-}
+export type { NoteEditorHandle } from '@/editor/note-editor-handle'
+import type { NoteEditorHandle } from '@/editor/note-editor-handle'
 
 interface NoteEditorProps {
   /** Initial markdown, read only on first render (uncontrolled). */
@@ -299,6 +245,8 @@ export function NoteEditor({
       // meowdown ≥0.33 collapses an active selection itself, so an insert
       // can never delete selected text — plain delegation is the whole story.
       insertMarkdown: (markdown) => innerRef.current?.insertMarkdown(markdown),
+      insertBlockEmbed: (source, replaceEmptyBlock = false) =>
+        innerRef.current?.insertWikiBlockEmbed(source, { replaceEmptyBlock }) ?? false,
       focus: () => innerRef.current?.focus(),
       setSelection: (position) => innerRef.current?.setSelection(position),
       getSelectedText: () => innerRef.current?.getSelectedText() ?? '',
@@ -324,6 +272,7 @@ export function NoteEditor({
       setBlockId: (target, id) => innerRef.current?.setBlockId(target, id) ?? false,
       revealHeading: (heading) => innerRef.current?.revealHeading(heading) ?? false,
       revealBlock: (target) => innerRef.current?.revealBlock(target) ?? false,
+      revealWikiEmbed: (target) => innerRef.current?.revealWikiEmbed(target) ?? false,
       refreshMarkdownRendering: () => innerRef.current?.refreshMarkdownRendering(),
     }),
     [],
@@ -341,6 +290,16 @@ export function NoteEditor({
   const handleWikilinkClick = useCallback(
     (payload: { target: string; event: MouseEvent | KeyboardEvent }) =>
       onWikiLinkClickRef.current?.(payload.target, payload.event),
+    [],
+  )
+  const renderWikiBlockEmbed = useCallback(
+    ({ target, interactive }: WikiBlockEmbedRenderProps) => (
+      <BlockTransclusion
+        target={target}
+        interactive={interactive}
+        onOpenSource={() => onWikiLinkClickRef.current?.(target)}
+      />
+    ),
     [],
   )
   const handleTagClick = useCallback(
@@ -459,6 +418,8 @@ export function NoteEditor({
         {...(titlePlaceholder !== undefined ? { placeholder: titlePlaceholder } : {})}
         onDocChange={handleDocChange}
         onWikilinkClick={handleWikilinkClick}
+        resolveWikiEmbed={resolveReflectWikiEmbed}
+        renderWikiBlockEmbed={renderWikiBlockEmbed}
         onTagClick={handleTagClick}
         onLinkClick={handleLinkClick}
         onImageClick={handleImageClick}

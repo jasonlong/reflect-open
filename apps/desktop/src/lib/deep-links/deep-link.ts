@@ -35,4 +35,7 @@ export type DeepLink =
   | { kind: 'capture'; capture: TextCaptureKind; text: string }
 
 /** A fragment safe to persist outside the current process. */
-export type DurableNoteFragment = Exclude<NoteFragment, { kind: 'blockPosition' }>
+export type DurableNoteFragment = Exclude<
+  NoteFragment,
+  { kind: 'blockPosition' | 'wikiEmbedPosition' }
+>

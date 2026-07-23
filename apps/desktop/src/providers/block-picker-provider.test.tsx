@@ -8,13 +8,17 @@ function Wrapper({ children }: { children: ReactNode }): ReactNode {
 }
 
 describe('BlockPickerProvider', () => {
-  it('opens reference intent by default and keeps embed intent internal', async () => {
+  it('tracks reference/embed intent and standalone replacement mode', async () => {
     const { result, act } = await renderHook(useBlockPicker, { wrapper: Wrapper })
     await act(() => result.current.openBlockPicker())
     expect(result.current).toMatchObject({ open: true, intent: 'reference' })
     await act(() => result.current.closeBlockPicker())
     expect(result.current.open).toBe(false)
-    await act(() => result.current.openBlockPicker('embed'))
-    expect(result.current).toMatchObject({ open: true, intent: 'embed' })
+    await act(() => result.current.openBlockPicker('embed', { replaceEmptyBlock: true }))
+    expect(result.current).toMatchObject({
+      open: true,
+      intent: 'embed',
+      replaceEmptyBlock: true,
+    })
   })
 })

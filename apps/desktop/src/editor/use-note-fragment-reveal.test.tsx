@@ -1,6 +1,6 @@
-import { render } from '@testing-library/react'
 import { act, type ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { render } from 'vitest-browser-react'
 import type { NoteEditorHandle } from '@/editor/note-editor'
 import { RouterProvider, useRouter } from '@/routing/router'
 import { useNoteFragmentReveal } from './use-note-fragment-reveal'
@@ -15,6 +15,7 @@ function editorHandle(): NoteEditorHandle {
     getMarkdown: () => '',
     setMarkdown: () => {},
     insertMarkdown: () => {},
+    insertBlockEmbed: () => false,
     focus: vi.fn(),
     setSelection: () => {},
     getSelectedText: () => '',
@@ -28,6 +29,7 @@ function editorHandle(): NoteEditorHandle {
     setBlockId: () => false,
     revealHeading: vi.fn(() => true),
     revealBlock: vi.fn(() => true),
+    revealWikiEmbed: vi.fn(() => true),
     refreshMarkdownRendering: () => {},
   }
 }
@@ -68,16 +70,16 @@ beforeEach(() => {
 })
 
 describe('useNoteFragmentReveal', () => {
-  it('waits for readiness and attachment, then reveals once per arrival', () => {
+  it('waits for readiness and attachment, then reveals once per arrival', async () => {
     const editor = editorHandle()
-    const view = render(
+    const view = await render(
       <Harness>
         <Host path="notes/a.md" ready={false} editor={null} />
       </Harness>,
     )
     expect(editor.revealBlock).not.toHaveBeenCalled()
 
-    view.rerender(
+    await view.rerender(
       <Harness>
         <Host path="notes/a.md" ready={true} editor={editor} />
       </Harness>,
@@ -85,14 +87,14 @@ describe('useNoteFragmentReveal', () => {
     expect(editor.revealBlock).toHaveBeenCalledTimes(1)
     expect(editor.revealBlock).toHaveBeenCalledWith({ id: 'alpha' })
 
-    view.rerender(
+    await view.rerender(
       <Harness>
         <Host path="notes/a.md" ready={true} editor={editor} />
       </Harness>,
     )
     expect(editor.revealBlock).toHaveBeenCalledTimes(1)
 
-    act(() => {
+    await act(() => {
       router?.navigate({
         kind: 'note',
         path: 'notes/a.md',
@@ -104,12 +106,24 @@ describe('useNoteFragmentReveal', () => {
       ordinal: 2,
       expectedText: 'Decision',
     })
+
+    await act(() => {
+      router?.navigate({
+        kind: 'note',
+        path: 'notes/a.md',
+        fragment: { kind: 'wikiEmbedPosition', ordinal: 1, expectedTarget: 'Plan#^alpha' },
+      })
+    })
+    expect(editor.revealWikiEmbed).toHaveBeenCalledWith({
+      ordinal: 1,
+      expectedTarget: 'Plan#^alpha',
+    })
     expect(editor.focus).not.toHaveBeenCalled()
   })
 
-  it('reveals headings again when history returns to their entry', () => {
+  it('reveals headings again when history returns to their entry', async () => {
     const editor = editorHandle()
-    const view = render(
+    const view = await render(
       <RouterProvider
         initialRoute={{
           kind: 'note',
@@ -122,23 +136,23 @@ describe('useNoteFragmentReveal', () => {
     )
     expect(editor.revealHeading).toHaveBeenCalledWith('Plan')
 
-    act(() => router?.navigate({ kind: 'tasks' }))
-    act(() => router?.back())
+    await act(() => router?.navigate({ kind: 'tasks' }))
+    await act(() => router?.back())
     expect(editor.revealHeading).toHaveBeenCalledTimes(2)
-    view.unmount()
+    await view.unmount()
   })
 
-  it('keeps the note open and reports a stale target without retrying', () => {
+  it('keeps the note open and reports a stale target without retrying', async () => {
     const editor = editorHandle()
     vi.mocked(editor.revealBlock).mockReturnValue(false)
-    const view = render(
+    const view = await render(
       <Harness>
         <Host path="notes/a.md" ready={true} editor={editor} />
       </Harness>,
     )
 
     expect(operationWarn).toHaveBeenCalledWith('That block is no longer available.')
-    view.rerender(
+    await view.rerender(
       <Harness>
         <Host path="notes/a.md" ready={true} editor={editor} />
       </Harness>,

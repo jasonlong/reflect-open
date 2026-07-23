@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest'
 import { setBridge } from '../ipc/bridge'
 import { applyProjection, connectIndex, openMigratedIndex, project } from './flow-test-harness'
 import { getBacklinks } from './queries-backlinks'
-import { getBlockById, resolveWikiAddress, searchBlocks } from './queries-blocks'
+import {
+  getBlockById,
+  getBlockEmbedPlaces,
+  resolveWikiAddress,
+  searchBlocks,
+} from './queries-blocks'
 import { getRenameLinkSources } from './queries'
 
 describe('block projection and wiki-address resolution', () => {
@@ -302,6 +307,25 @@ describe('block projection and wiki-address resolution', () => {
         source_path: 'notes/source.md',
         block_id: 'block',
         embed_ordinal: 1,
+      })
+      await expect(getBlockEmbedPlaces('notes/document.md', 'block')).resolves.toEqual({
+        total: 2,
+        places: [
+          {
+            kind: 'source',
+            path: 'notes/document.md',
+            noteTitle: 'Document',
+            breadcrumbs: [],
+          },
+          {
+            kind: 'transclusion',
+            path: 'notes/source.md',
+            noteTitle: 'Source',
+            breadcrumbs: [],
+            embedOrdinal: 1,
+            expectedTarget: 'Document#^block',
+          },
+        ],
       })
     } finally {
       setBridge(null)

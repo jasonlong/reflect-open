@@ -46,8 +46,11 @@ export interface CommandContext {
   openTemplatePicker: () => void
   /** Open the "New template" name dialog. */
   openTemplateCreate: () => void
-  /** Open the shared existing-block reference picker. */
-  openBlockPicker?: () => void
+  /** Open the shared existing-block reference/embed picker. */
+  openBlockPicker?: (
+    intent?: 'reference' | 'embed',
+    options?: { readonly replaceEmptyBlock?: boolean },
+  ) => void
   /**
    * Persist the semantic-search opt-in (`semanticSearchEnabled`).
    * EmbeddingsSync reacts to the setting by loading — first time:

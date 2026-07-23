@@ -239,7 +239,7 @@ export function useAppShortcuts(): CommandContext {
       openShortcuts,
       openTemplatePicker,
       openTemplateCreate,
-      openBlockPicker: () => openBlockPicker('reference'),
+      openBlockPicker,
       enableSemanticSearch: () => {
         updateSettings({ semanticSearchEnabled: true })
         // EmbeddingsSync loads an untouched runtime; a `failed` one only

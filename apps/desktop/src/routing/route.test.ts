@@ -58,6 +58,12 @@ describe('routesEqual', () => {
         { ...note, fragment: { kind: 'blockPosition', ordinal: 3, expectedText: 'Decision' } },
       ),
     ).toBe(false)
+    expect(
+      routesEqual(
+        { ...note, fragment: { kind: 'wikiEmbedPosition', ordinal: 1, expectedTarget: 'A#^b' } },
+        { ...note, fragment: { kind: 'wikiEmbedPosition', ordinal: 1, expectedTarget: 'A#^b' } },
+      ),
+    ).toBe(true)
   })
 
   it('treats singleton screens as equal to themselves', () => {
@@ -86,6 +92,17 @@ describe('normalizeRoute', () => {
         fragment: { kind: 'block', id: 'invalid_id' },
       }),
     ).toEqual({ kind: 'note', path: 'notes/a.md' })
+    expect(
+      normalizeRoute({
+        kind: 'note',
+        path: 'notes/a.md',
+        fragment: { kind: 'wikiEmbedPosition', ordinal: 2, expectedTarget: '  Plan#^a  ' },
+      }),
+    ).toEqual({
+      kind: 'note',
+      path: 'notes/a.md',
+      fragment: { kind: 'wikiEmbedPosition', ordinal: 2, expectedTarget: 'Plan#^a' },
+    })
     expect(
       normalizeRoute({
         kind: 'daily',

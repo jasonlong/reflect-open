@@ -15,6 +15,7 @@ import type { NoteEditorHandle } from '@/editor/note-editor'
 import type { CommandContext } from '@/lib/commands/types'
 import {
   ensureBlockAddress,
+  formatBlockAddressEmbed,
   formatBlockAddressReference,
 } from '@/lib/note-block-reference'
 import { INDEX_QUERY_SCOPE } from '@/lib/query-client'
@@ -40,7 +41,7 @@ function secondaryLabel(noteTitle: string, breadcrumbs: readonly string[]): stri
 
 /** Keyboard-first source block search and reference insertion surface. */
 export function BlockPicker({ context }: BlockPickerProps): ReactElement | null {
-  const { open, intent, closeBlockPicker } = useBlockPicker()
+  const { open, intent, replaceEmptyBlock, closeBlockPicker } = useBlockPicker()
   const { graph } = useGraph()
   const [query, setQuery] = useState('')
   const [pending, setPending] = useState(false)
@@ -76,13 +77,14 @@ export function BlockPicker({ context }: BlockPickerProps): ReactElement | null 
     const generation = context.generation()
     if (
       pending ||
-      intent !== 'reference' ||
       destination === null ||
       generation === null ||
       context.notePath() !== destination.path ||
       noteEditorHandleFor(destination.path) !== destination.editor
     ) {
-      startOperation('Inserting block reference').fail('The destination editor is no longer available.')
+      startOperation(intent === 'embed' ? 'Embedding block' : 'Inserting block reference').fail(
+        'The destination editor is no longer available.',
+      )
       return
     }
     setPending(true)
@@ -100,12 +102,22 @@ export function BlockPicker({ context }: BlockPickerProps): ReactElement | null 
       ) {
         throw new Error('The destination editor changed while the block was being addressed.')
       }
-      destination.editor.insertMarkdown(formatBlockAddressReference(address))
+      if (intent === 'reference') {
+        destination.editor.insertMarkdown(formatBlockAddressReference(address))
+      } else if (
+        !destination.editor.insertBlockEmbed(
+          formatBlockAddressEmbed(address),
+          replaceEmptyBlock,
+        )
+      ) {
+        throw new Error('The block embed could not be inserted at the current position.')
+      }
       closeBlockPicker()
       destination.editor.focus()
     } catch (cause) {
-      startOperation('Inserting block reference').fail(
-        cause instanceof Error ? cause.message : 'The block reference could not be inserted.',
+      const operation = intent === 'embed' ? 'Embedding block' : 'Inserting block reference'
+      startOperation(operation).fail(
+        cause instanceof Error ? cause.message : `The ${intent} could not be inserted.`,
       )
       setPending(false)
     }
@@ -119,8 +131,12 @@ export function BlockPicker({ context }: BlockPickerProps): ReactElement | null 
           closeBlockPicker()
         }
       }}
-      title="Insert block reference"
-      description="Search existing bullets and insert a reference"
+      title={intent === 'embed' ? 'Embed block' : 'Insert block reference'}
+      description={
+        intent === 'embed'
+          ? 'Search existing bullets and insert a read-only transclusion'
+          : 'Search existing bullets and insert a reference'
+      }
     >
       <Command shouldFilter={false}>
         <CommandInput

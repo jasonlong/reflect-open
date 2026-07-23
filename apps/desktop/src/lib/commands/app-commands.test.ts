@@ -183,6 +183,18 @@ describe('app commands', () => {
     expect(noNote.openTemplatePicker).not.toHaveBeenCalled()
   })
 
+  it('opens the block picker with explicit reference and embed intents', async () => {
+    const openBlockPicker = vi.fn()
+    const { context } = fakeContext({
+      route: () => ({ kind: 'note', path: 'notes/a.md' }),
+      openBlockPicker,
+    })
+    await command('note.insertBlockReference').run(context)
+    await command('note.embedBlock').run(context)
+    expect(openBlockPicker).toHaveBeenNthCalledWith(1, 'reference')
+    expect(openBlockPicker).toHaveBeenNthCalledWith(2, 'embed')
+  })
+
   it('template.new opens the name dialog through the context capability', async () => {
     const { context } = fakeContext()
     await command('template.new').run(context)

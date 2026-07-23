@@ -18,6 +18,11 @@ export type NoteFragment =
       readonly ordinal: number
       readonly expectedText: string
     }
+  | {
+      readonly kind: 'wikiEmbedPosition'
+      readonly ordinal: number
+      readonly expectedTarget: string
+    }
 
 export type Route =
   | { kind: 'today' }
@@ -162,6 +167,12 @@ function normalizeNoteFragment(fragment: NoteFragment | null | undefined): NoteF
         ? { ...fragment, expectedText }
         : null
     }
+    case 'wikiEmbedPosition': {
+      const expectedTarget = fragment.expectedTarget.trim()
+      return Number.isSafeInteger(fragment.ordinal) && fragment.ordinal >= 0 && expectedTarget !== ''
+        ? { ...fragment, expectedTarget }
+        : null
+    }
   }
 }
 
@@ -183,6 +194,10 @@ function fragmentsEqual(
     case 'blockPosition': {
       const other = right as Extract<NoteFragment, { kind: 'blockPosition' }>
       return left.ordinal === other.ordinal && left.expectedText === other.expectedText
+    }
+    case 'wikiEmbedPosition': {
+      const other = right as Extract<NoteFragment, { kind: 'wikiEmbedPosition' }>
+      return left.ordinal === other.ordinal && left.expectedTarget === other.expectedTarget
     }
   }
 }

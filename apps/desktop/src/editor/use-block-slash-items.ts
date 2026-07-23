@@ -3,7 +3,7 @@ import type { SlashMenuItem, SlashMenuSearchHandler } from '@meowdown/react'
 import { useBlockPicker } from '@/providers/block-picker-provider'
 import type { NoteEditorHandle } from './note-editor'
 
-/** The `/Reference block` entry point into the shared block picker. */
+/** The block reference and read-only embed entries for the shared picker. */
 export function useBlockSlashItems(
   getEditor: () => NoteEditorHandle | null,
 ): SlashMenuSearchHandler {
@@ -17,6 +17,16 @@ export function useBlockSlashItems(
         onSelect: () => {
           if (getEditor() !== null) {
             openBlockPicker('reference')
+          }
+        },
+      },
+      {
+        id: 'embed-block',
+        label: 'Embed block',
+        keywords: ['block', 'embed', 'transclude', 'mirror', 'bullet'],
+        onSelect: () => {
+          if (getEditor() !== null) {
+            openBlockPicker('embed', { replaceEmptyBlock: true })
           }
         },
       },

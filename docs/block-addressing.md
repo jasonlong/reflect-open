@@ -67,4 +67,12 @@ Wiki-link rows retain both the folded complete target and, when syntactically va
 
 ## Transclusion boundary
 
-The first transclusion implementation is read-only. The source note remains the only editable content owner. Missing, ambiguous, stale, and cyclic targets render non-destructive placeholders. Expanded content is local UI only: search, embeddings, AI context, publishing, export, and clipboard serialization continue to use the authored `![[...]]` source unless a future feature explicitly defines otherwise.
+A standalone `![[Note#^id]]` renders the addressed list-item subtree through the same native Markdown presentation as the editor. Inline occurrences stay literal: Reflect never places nested list DOM inside a paragraph. The source is read from a live open session before disk, reparsed, and required to contain exactly one matching ID; indexed Markdown is never treated as display authority. Index/file events invalidate the local query so mounted instances update without rebuilding their containing editor.
+
+The first transclusion implementation is read-only. The source note remains the only editable content owner. Tasks and links inside expanded content are passive. Missing notes/blocks, duplicate IDs, read errors, cycles, and nesting beyond three levels render compact non-destructive placeholders without exposing technical IDs. Each instance can collapse locally without changing Markdown or another instance.
+
+**Embed block…**, **Embed block** in the `/` menu, and **Copy block embed** author `![[...]]`. Picker selection uses the same stale-safe, on-demand ID assignment as references and Meowdown inserts the embed as a structurally standalone block in one undoable transaction. Undo removes the embed but intentionally leaves a newly minted target ID.
+
+The mirror affordance opens **Appears in N places**, which lists the source and uniquely resolved embed occurrences only. Occurrence jumps carry a transient document-order ordinal plus expected target; Meowdown verifies both before revealing it. These positional fragments are never serialized into Markdown, deep links, or secondary-window addresses.
+
+Expanded content is local UI only: search, embeddings, AI context, publishing, export, and clipboard serialization continue to use the authored `![[...]]` source unless a future feature explicitly defines otherwise.

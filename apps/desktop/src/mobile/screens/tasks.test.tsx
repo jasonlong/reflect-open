@@ -98,6 +98,7 @@ vi.mock('@/editor/note-editor', async () => {
             }
           },
           insertMarkdown: () => {},
+          insertBlockEmbed: () => false,
           focus: () => {
             editorProbe.focusCalls += 1
           },
@@ -113,6 +114,7 @@ vi.mock('@/editor/note-editor', async () => {
           setBlockId: () => false,
           revealHeading: () => false,
           revealBlock: () => false,
+          revealWikiEmbed: () => false,
           refreshMarkdownRendering: () => {},
         })
         return () => handleRef?.(null)

@@ -2,10 +2,18 @@ import { createContext, useCallback, useContext, useMemo, useState, type ReactEl
 
 export type BlockPickerIntent = 'reference' | 'embed'
 
+export interface BlockPickerOpenOptions {
+  readonly replaceEmptyBlock?: boolean
+}
+
 interface BlockPickerContextValue {
   readonly open: boolean
   readonly intent: BlockPickerIntent
-  readonly openBlockPicker: (intent?: BlockPickerIntent) => void
+  readonly replaceEmptyBlock: boolean
+  readonly openBlockPicker: (
+    intent?: BlockPickerIntent,
+    options?: BlockPickerOpenOptions,
+  ) => void
   readonly closeBlockPicker: () => void
 }
 
@@ -13,13 +21,21 @@ const BlockPickerContext = createContext<BlockPickerContextValue | null>(null)
 
 /** Workspace-owned state for the shared reference/embed block picker. */
 export function BlockPickerProvider({ children }: { children: ReactNode }): ReactElement {
-  const [state, setState] = useState<{ open: boolean; intent: BlockPickerIntent }>({
-    open: false,
-    intent: 'reference',
-  })
-  const openBlockPicker = useCallback((intent: BlockPickerIntent = 'reference') => {
-    setState({ open: true, intent })
-  }, [])
+  const [state, setState] = useState<{
+    open: boolean
+    intent: BlockPickerIntent
+    replaceEmptyBlock: boolean
+  }>({ open: false, intent: 'reference', replaceEmptyBlock: false })
+  const openBlockPicker = useCallback(
+    (intent: BlockPickerIntent = 'reference', options: BlockPickerOpenOptions = {}) => {
+      setState({
+        open: true,
+        intent,
+        replaceEmptyBlock: options.replaceEmptyBlock ?? false,
+      })
+    },
+    [],
+  )
   const closeBlockPicker = useCallback(() => {
     setState((current) => ({ ...current, open: false }))
   }, [])

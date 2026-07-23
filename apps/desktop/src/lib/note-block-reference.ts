@@ -60,6 +60,14 @@ export function formatBlockAddressReference(address: {
   return `[[${address.noteAddress}#^${address.id}|${label}]]`
 }
 
+/** Portable Markdown for a standalone block embed. */
+export function formatBlockAddressEmbed(address: {
+  readonly noteAddress: string
+  readonly id: string
+}): string {
+  return `![[${address.noteAddress}#^${address.id}]]`
+}
+
 export function formatBlockReference(address: ActiveBlockAddress): string {
   return formatBlockAddressReference({
     noteAddress: wikiLinkTargetForTitle(address.noteTitle),
@@ -205,6 +213,19 @@ export function runCopyBlockReference(context: CommandContext): Promise<void> {
     'Block reference copied',
     'Copying block reference',
     formatBlockReference,
+  )
+}
+
+/** Copy a portable standalone embed of the active block. */
+export function runCopyBlockEmbed(context: CommandContext): Promise<void> {
+  return copyBlockValue(
+    context,
+    'Block embed copied',
+    'Copying block embed',
+    (address) => formatBlockAddressEmbed({
+      noteAddress: wikiLinkTargetForTitle(address.noteTitle),
+      id: address.id,
+    }),
   )
 }
 
