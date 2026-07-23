@@ -5,6 +5,7 @@ import { PaletteProvider, usePalette } from '@/components/command-palette/palett
 import { listRegisteredBindings } from '@/editor/keymap'
 import { registerAppCommands } from '@/lib/commands/app-commands'
 import { NoteTemplatesProvider } from '@/providers/note-templates-provider'
+import { BlockPickerProvider } from '@/providers/block-picker-provider'
 import { ShortcutsProvider, useShortcuts } from '@/providers/shortcuts-provider'
 import { SidebarProvider, useSidebar } from '@/providers/sidebar-provider'
 import { useAppShortcuts } from './app-shortcuts'
@@ -74,7 +75,9 @@ function shortcutsHook() {
           <PaletteProvider>
             <ShortcutsProvider>
               <NoteTemplatesProvider>
-                <SidebarProvider>{children}</SidebarProvider>
+                <BlockPickerProvider>
+                  <SidebarProvider>{children}</SidebarProvider>
+                </BlockPickerProvider>
               </NoteTemplatesProvider>
             </ShortcutsProvider>
           </PaletteProvider>

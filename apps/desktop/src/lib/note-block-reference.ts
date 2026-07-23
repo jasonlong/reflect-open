@@ -1,7 +1,10 @@
 import {
+  ensureBlockId,
   errorMessage,
   newBlockId,
   parseNote,
+  readNote,
+  writeNote,
   wikiLinkSafe,
   wikiLinkTargetForTitle,
 } from '@reflect/core'
@@ -13,6 +16,20 @@ import { deepLinkForNote } from '@/lib/note-deep-link'
 import { startOperation } from '@/lib/operations'
 
 const BLOCK_REFERENCE_LABEL_MAX_CODE_POINTS = 80
+const blockAddressWrites = new Map<string, Promise<void>>()
+
+export interface EnsureBlockAddressInput {
+  readonly notePath: string
+  readonly locator: { readonly ordinal: number; readonly expectedText: string }
+  readonly indexedBlockId: string | null
+  readonly generation: number
+}
+
+export interface EnsuredBlockAddress {
+  readonly id: string
+  readonly noteAddress: string
+  readonly blockText: string
+}
 
 export interface ActiveBlockAddress {
   readonly path: string
@@ -34,10 +51,21 @@ export function blockReferenceLabel(blockText: string, noteTitle: string): strin
 }
 
 /** Portable Markdown for a human-labelled block reference. */
+export function formatBlockAddressReference(address: {
+  readonly noteAddress: string
+  readonly id: string
+  readonly blockText: string
+}): string {
+  const label = blockReferenceLabel(address.blockText, address.noteAddress)
+  return `[[${address.noteAddress}#^${address.id}|${label}]]`
+}
+
 export function formatBlockReference(address: ActiveBlockAddress): string {
-  const noteTarget = wikiLinkTargetForTitle(address.noteTitle)
-  const label = blockReferenceLabel(address.blockText, address.noteTitle)
-  return `[[${noteTarget}#^${address.id}|${label}]]`
+  return formatBlockAddressReference({
+    noteAddress: wikiLinkTargetForTitle(address.noteTitle),
+    id: address.id,
+    blockText: address.blockText,
+  })
 }
 
 function uniqueCurrentId(block: NoteEditorBlock, markdown: string): boolean {
@@ -48,6 +76,56 @@ function uniqueCurrentId(block: NoteEditorBlock, markdown: string): boolean {
     (candidate) => candidate.id === block.id,
   )
   return claims.length === 1
+}
+
+function serializeBlockWrite<T>(path: string, operation: () => Promise<T>): Promise<T> {
+  const previous = blockAddressWrites.get(path) ?? Promise.resolve()
+  const result = previous.catch(() => {}).then(operation)
+  blockAddressWrites.set(path, result.then(() => {}, () => {}))
+  return result
+}
+
+/** Ensure an indexed block locator has a durable address through its current owner. */
+export function ensureBlockAddress(input: EnsureBlockAddressInput): Promise<EnsuredBlockAddress> {
+  return serializeBlockWrite(input.notePath, async () => {
+    const session = openSession(input.notePath)
+    const editor = noteEditorHandleFor(input.notePath)
+    if (session !== null) {
+      if (editor === null || !session.canCommitEditorChange()) {
+        throw new Error('The source note is open but cannot save a block reference right now.')
+      }
+      const current = editor.getMarkdown()
+      const edit = ensureBlockId(current, input.locator, input.indexedBlockId ?? undefined)
+      if (edit.kind === 'assigned' && !editor.setBlockId(input.locator, edit.id)) {
+        throw new Error('The selected block changed before it could be addressed.')
+      }
+      await session.flush()
+      if (session.isDirty()) {
+        throw new Error('The block reference could not be saved.')
+      }
+      const parsed = parseNote({ path: input.notePath, source: session.content() })
+      return {
+        id: edit.id,
+        noteAddress: wikiLinkTargetForTitle(parsed.title),
+        blockText: input.locator.expectedText,
+      }
+    }
+
+    if (editor !== null) {
+      throw new Error('The source editor has no owning note session.')
+    }
+    const source = await readNote(input.notePath)
+    const edit = ensureBlockId(source, input.locator, input.indexedBlockId ?? undefined)
+    if (edit.kind === 'assigned') {
+      await writeNote(input.notePath, edit.source, input.generation)
+    }
+    const parsed = parseNote({ path: input.notePath, source: edit.source })
+    return {
+      id: edit.id,
+      noteAddress: wikiLinkTargetForTitle(parsed.title),
+      blockText: input.locator.expectedText,
+    }
+  })
 }
 
 /**

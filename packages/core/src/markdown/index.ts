@@ -60,6 +60,12 @@ export {
   TaskStaleError,
 } from './edit'
 export { renameWikiLink, type WikiLinkRenameCandidate } from './wiki-link-rename'
+export {
+  ensureBlockId,
+  BlockLocatorStaleError,
+  type BlockLocator,
+  type EnsureBlockIdResult,
+} from './edit-block-id'
 export { displayNoteTitle, wikiLinkTargetForTitle } from './note-title'
 export { parseTaskMarker } from './task-marker'
 export {

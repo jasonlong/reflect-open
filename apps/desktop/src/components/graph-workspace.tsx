@@ -12,6 +12,7 @@ import { CaptureProvider } from '@/providers/capture-provider'
 import { ChatProvider } from '@/providers/chat-provider'
 import { DeepLinkProvider } from '@/providers/deep-link-provider'
 import { NoteTemplatesProvider } from '@/providers/note-templates-provider'
+import { BlockPickerProvider } from '@/providers/block-picker-provider'
 import { ShortcutsProvider } from '@/providers/shortcuts-provider'
 import { SidebarProvider } from '@/providers/sidebar-provider'
 import { SyncProvider } from '@/providers/sync-provider'
@@ -40,7 +41,8 @@ export function GraphWorkspace({ graph }: GraphWorkspaceProps): ReactElement {
         <PaletteProvider>
           <ShortcutsProvider>
             <NoteTemplatesProvider>
-              <SidebarProvider>
+              <BlockPickerProvider>
+                <SidebarProvider>
                 {/* Above the sidebar: a recording must survive the sidebar (and its
                     mic button) unmounting on collapse. */}
                 <AudioMemoProvider graph={graph}>
@@ -72,7 +74,8 @@ export function GraphWorkspace({ graph }: GraphWorkspaceProps): ReactElement {
                     </DeepLinkProvider>
                   </CaptureProvider>
                 </AudioMemoProvider>
-              </SidebarProvider>
+                </SidebarProvider>
+              </BlockPickerProvider>
             </NoteTemplatesProvider>
           </ShortcutsProvider>
         </PaletteProvider>

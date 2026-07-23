@@ -40,6 +40,8 @@ This means a real note titled `Project#Plan` continues to win over treating `Pla
 
 Internal references use a readable note address and human alias. **Copy block reference** snapshots sanitized block text into the alias so normal UI shows meaningful content rather than `Note#^id`; delimiter-rich text is flattened and long labels are truncated by Unicode code point. **Copy block deep link** uses a stable note ID/date plus the same fragment. Both actions mint an ID only for the explicitly selected list item and wait for the owning editor session to persist it before touching the clipboard.
 
+**Insert block reference…** (command palette) and **Reference block** (`/` menu) provide the source-first workflow. Search stays local and bounded across block text, note titles, and breadcrumbs, including private notes. Merely searching, highlighting, or cancelling writes nothing. Entering a result revalidates its ordinal and current text, then assigns an ID only if still safe: open notes mutate through their live editor/session, while closed notes use a generation-pinned Markdown edit. Stale or ambiguous results are refused. The target ID remains after undoing the inserted reference because other references may have begun using that identity.
+
 ## Presentation
 
 Following a reference carries the fragment through route history, secondary windows, and deep links, then reveals it once the destination editor is ready. Missing blocks stay on the source note with non-blocking “block unavailable” feedback; duplicate IDs are reported as ambiguous and never first-match. Incoming backlinks retain these references and show a quiet human target label, while ordinary note backlinks remain unchanged.

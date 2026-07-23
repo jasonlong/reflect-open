@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react'
 import type { GraphInfo } from '@reflect/core'
 import { AppShell } from '@/components/app-shell'
+import { BlockPicker } from '@/components/blocks/block-picker'
 import { CommandPalette } from '@/components/command-palette/command-palette'
 import { DailyContextSidebar } from '@/components/context-sidebar/daily-context-sidebar'
 import { NoteContextSidebar } from '@/components/context-sidebar/note-context-sidebar'
@@ -64,6 +65,7 @@ export function WorkspaceContent({ graph }: WorkspaceContentProps): ReactElement
         <CommandPalette context={commandContext} />
         <ShortcutsDialog />
         <TemplatePicker context={commandContext} />
+        <BlockPicker context={commandContext} />
         <TemplateCreateDialog context={commandContext} />
         <EmbeddingsSync />
       </div>

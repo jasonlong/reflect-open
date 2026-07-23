@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { setBridge } from '@reflect/core'
 import type { NoteSession } from '@/editor/note-session'
 import {
   registerNoteEditorHandle,
@@ -10,6 +11,8 @@ import type { CommandContext } from '@/lib/commands/types'
 import {
   blockReferenceLabel,
   ensureActiveBlockAddress,
+  ensureBlockAddress,
+  formatBlockAddressReference,
   formatBlockReference,
   runCopyBlockReference,
 } from './note-block-reference'
@@ -90,7 +93,7 @@ function installEditor(options?: {
     discardPendingReplacement: () => {},
     getActiveBlock: () => active,
     setActiveBlockId,
-    setBlockId: () => false,
+    setBlockId: (_locator, id) => setActiveBlockId(id),
     revealHeading: () => false,
     revealBlock: () => false,
     refreshMarkdownRendering: () => {},
@@ -129,6 +132,7 @@ afterEach(() => {
     cleanups.pop()?.()
   }
   Reflect.deleteProperty(navigator, 'clipboard')
+  setBridge(null)
   vi.restoreAllMocks()
 })
 
@@ -200,6 +204,54 @@ describe('ensureActiveBlockAddress', () => {
 
     installEditor({ flushFails: true })
     await expect(ensureActiveBlockAddress(context())).rejects.toThrow('could not be saved')
+  })
+})
+
+describe('ensureBlockAddress', () => {
+  it('mutates an open target through its editor/session and formats the result', async () => {
+    const installed = installEditor()
+    const address = await ensureBlockAddress({
+      notePath: 'notes/project.md',
+      locator: { ordinal: 0, expectedText: 'Keep Markdown' },
+      indexedBlockId: null,
+      generation: 7,
+    })
+
+    expect(installed.flush).toHaveBeenCalled()
+    expect(formatBlockAddressReference(address)).toMatch(
+      /^\[\[Project#\^[0-9a-z]{8}\|Keep Markdown\]\]$/,
+    )
+  })
+
+  it('edits a closed note on disk and refuses stale locators', async () => {
+    let source = '# Closed\n\n- Target block\n'
+    const invoke = vi.fn(async (command: string, args: Record<string, unknown>) => {
+      if (command === 'note_read') {
+        return source
+      }
+      if (command === 'note_write') {
+        source = String(args['contents'])
+        return null
+      }
+      throw new Error(`unexpected command: ${command}`)
+    })
+    setBridge({ invoke, listen: async () => () => {} })
+
+    const address = await ensureBlockAddress({
+      notePath: 'notes/closed.md',
+      locator: { ordinal: 0, expectedText: 'Target block' },
+      indexedBlockId: null,
+      generation: 7,
+    })
+    expect(source).toContain(`^${address.id}`)
+    await expect(
+      ensureBlockAddress({
+        notePath: 'notes/closed.md',
+        locator: { ordinal: 0, expectedText: 'Changed' },
+        indexedBlockId: address.id,
+        generation: 7,
+      }),
+    ).rejects.toThrow('changed')
   })
 })
 

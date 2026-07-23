@@ -15,6 +15,7 @@ import { useChatSession } from '@/providers/chat-provider'
 import { useFocusedDailyDate } from '@/providers/focused-daily-provider'
 import { useGraph } from '@/providers/graph-provider'
 import { useNoteTemplates } from '@/providers/note-templates-provider'
+import { useBlockPicker } from '@/providers/block-picker-provider'
 import { useSettings } from '@/providers/settings-provider'
 import { useShortcuts } from '@/providers/shortcuts-provider'
 import { useSidebar } from '@/providers/sidebar-provider'
@@ -169,6 +170,7 @@ export function useAppShortcuts(): CommandContext {
     pickerOpen: templatePickerOpen,
     createOpen: templateCreateOpen,
   } = useNoteTemplates()
+  const { openBlockPicker, open: blockPickerOpen } = useBlockPicker()
   const { toggleSidebar } = useSidebar()
   const { toggle: toggleAudioMemo } = useAudioMemo()
   const { newChat } = useChatSession()
@@ -196,7 +198,7 @@ export function useAppShortcuts(): CommandContext {
   useEffect(() => {
     paletteOpenRef.current = paletteOpen
     shortcutsOpenRef.current = shortcutsOpen
-    templatesOpenRef.current = templatePickerOpen || templateCreateOpen
+    templatesOpenRef.current = templatePickerOpen || templateCreateOpen || blockPickerOpen
     generationRef.current = graph?.generation ?? null
     graphRootRef.current = graph?.root ?? null
     recentsRef.current = recents
@@ -237,6 +239,7 @@ export function useAppShortcuts(): CommandContext {
       openShortcuts,
       openTemplatePicker,
       openTemplateCreate,
+      openBlockPicker: () => openBlockPicker('reference'),
       enableSemanticSearch: () => {
         updateSettings({ semanticSearchEnabled: true })
         // EmbeddingsSync loads an untouched runtime; a `failed` one only
@@ -255,6 +258,7 @@ export function useAppShortcuts(): CommandContext {
       openShortcuts,
       openTemplatePicker,
       openTemplateCreate,
+      openBlockPicker,
       toggleSidebar,
       newChat,
       toggleAudioMemo,

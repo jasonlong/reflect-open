@@ -1,6 +1,27 @@
 import { normalizeWikiTarget, parseWikiAddressCandidates } from '../markdown'
+import { sql } from 'kysely'
 import { db } from './db'
+import { splitSearchTerms } from './search-query'
 import { decodeBlockBreadcrumbs } from './indexed-note'
+
+const DEFAULT_BLOCK_SEARCH_LIMIT = 30
+const MAX_BLOCK_SEARCH_LIMIT = 100
+
+/** One local block-picker search result. */
+export interface BlockSearchResult {
+  readonly path: string
+  readonly noteTitle: string
+  readonly dailyDate: string | null
+  readonly ordinal: number
+  readonly blockId: string | null
+  readonly text: string
+  readonly breadcrumbs: readonly string[]
+}
+
+export interface BlockSearchOptions {
+  readonly currentPath?: string | null
+  readonly limit?: number
+}
 
 /** One current list-block projection. Markdown remains the durable authority. */
 export interface BlockProjection {
@@ -64,6 +85,71 @@ function toBlockProjection(row: {
     ...row,
     breadcrumbs: decodeBlockBreadcrumbs(row.breadcrumbs),
   }
+}
+
+/** Search local block text, note titles, and breadcrumb context within a hard bound. */
+export async function searchBlocks(
+  query: string,
+  options: BlockSearchOptions = {},
+): Promise<BlockSearchResult[]> {
+  const requestedLimit = options.limit ?? DEFAULT_BLOCK_SEARCH_LIMIT
+  const limit = Math.min(MAX_BLOCK_SEARCH_LIMIT, Math.max(1, Math.trunc(requestedLimit)))
+  const currentPath = options.currentPath ?? ''
+  const terms = splitSearchTerms(query)
+  const rows =
+    terms.length === 0
+      ? await db
+          .selectFrom('blocks')
+          .innerJoin('notes', 'notes.path', 'blocks.notePath')
+          .where('notes.kind', '!=', 'template')
+          .select([
+            'blocks.notePath as path',
+            'notes.title as noteTitle',
+            'notes.dailyDate',
+            'blocks.ordinal',
+            'blocks.blockId',
+            'blocks.text',
+            'blocks.breadcrumbs',
+          ])
+          .orderBy(sql`CASE WHEN blocks.note_path = ${currentPath} THEN 0 ELSE 1 END`)
+          .orderBy('notes.updatedAt', 'desc')
+          .orderBy('blocks.ordinal')
+          .limit(limit)
+          .execute()
+      : await db
+          .selectFrom('blocksFts')
+          .innerJoin('blocks', (join) =>
+            join
+              .onRef('blocks.notePath', '=', 'blocksFts.notePath')
+              .on(sql`blocks.ordinal = CAST(blocks_fts.ordinal AS INTEGER)`),
+          )
+          .innerJoin('notes', 'notes.path', 'blocks.notePath')
+          .where('notes.kind', '!=', 'template')
+          .where(sql<boolean>`blocks_fts MATCH ${prefixMatch(terms)}`)
+          .select([
+            'blocks.notePath as path',
+            'notes.title as noteTitle',
+            'notes.dailyDate',
+            'blocks.ordinal',
+            'blocks.blockId',
+            'blocks.text',
+            'blocks.breadcrumbs',
+          ])
+          .orderBy(sql`bm25(blocks_fts, 0, 10.0, 3.0, 2.0)`)
+          .orderBy(sql`CASE WHEN blocks.note_path = ${currentPath} THEN 0 ELSE 1 END`)
+          .orderBy('notes.updatedAt', 'desc')
+          .orderBy('blocks.ordinal')
+          .limit(limit)
+          .execute()
+
+  return rows.map((row) => ({
+    ...row,
+    breadcrumbs: decodeBlockBreadcrumbs(row.breadcrumbs),
+  }))
+}
+
+function prefixMatch(terms: readonly string[]): string {
+  return terms.map((term) => `"${term.replace(/"/g, '""')}"*`).join(' ')
 }
 
 /**

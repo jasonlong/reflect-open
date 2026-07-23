@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { setBridge } from '../ipc/bridge'
 import { applyProjection, connectIndex, openMigratedIndex, project } from './flow-test-harness'
 import { getBacklinks } from './queries-backlinks'
-import { getBlockById, resolveWikiAddress } from './queries-blocks'
+import { getBlockById, resolveWikiAddress, searchBlocks } from './queries-blocks'
 import { getRenameLinkSources } from './queries'
 
 describe('block projection and wiki-address resolution', () => {
@@ -104,6 +104,43 @@ describe('block projection and wiki-address resolution', () => {
         kind: 'missing',
         target: 'Hidden#^template',
       })
+    } finally {
+      setBridge(null)
+      database.close()
+    }
+  })
+
+  it('searches block text, breadcrumbs, and titles within a hard bound', async () => {
+    const database = openMigratedIndex()
+    applyProjection(
+      database,
+      project('notes/project.md', '# Project\n\n- Parent context\n  - Searchable decision\n', 20),
+    )
+    applyProjection(
+      database,
+      project('notes/other.md', '# Other notebook\n\n- Different block\n', 10),
+    )
+    applyProjection(
+      database,
+      project('templates/hidden.md', '# Hidden\n\n- Searchable template\n', 30),
+    )
+    connectIndex(database)
+    try {
+      await expect(searchBlocks('search', { currentPath: 'notes/project.md' })).resolves.toMatchObject([
+        {
+          path: 'notes/project.md',
+          noteTitle: 'Project',
+          text: 'Searchable decision',
+          breadcrumbs: ['Parent context'],
+        },
+      ])
+      await expect(searchBlocks('noteb', { limit: 1 })).resolves.toMatchObject([
+        { path: 'notes/other.md', noteTitle: 'Other notebook' },
+      ])
+      await expect(searchBlocks('', { currentPath: 'notes/project.md', limit: 1 })).resolves.toMatchObject([
+        { path: 'notes/project.md' },
+      ])
+      await expect(searchBlocks('" OR *', { limit: 1000 })).resolves.toEqual([])
     } finally {
       setBridge(null)
       database.close()

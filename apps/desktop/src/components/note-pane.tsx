@@ -26,6 +26,7 @@ import { markModeFromSyntax } from '@/editor/mark-mode'
 import { NoteEditor, type NoteEditorHandle } from '@/editor/note-editor'
 import { resolveAssetFileLink, useAssetPersistence } from '@/editor/use-asset-persistence'
 import { useEditorAutocomplete } from '@/editor/use-editor-autocomplete'
+import { useBlockSlashItems } from '@/editor/use-block-slash-items'
 import { useNoteDocument } from '@/editor/use-note-document'
 import { useNoteFragmentReveal } from '@/editor/use-note-fragment-reveal'
 import { useTagNavigation } from '@/editor/use-tag-navigation'
@@ -196,8 +197,18 @@ export function NotePaneComponent({
   // The `/` menu's template rows insert into this pane's own editor, read
   // through the registry ref at select time (a late resolve after the pane
   // unmounted must insert nowhere rather than somewhere stale).
-  const onSlashMenuSearch = useTemplateSlashItems(
-    useCallback(() => registeredHandle.current?.handle ?? null, []),
+  const getRegisteredEditor = useCallback(
+    () => registeredHandle.current?.handle ?? null,
+    [],
+  )
+  const templateSlashItems = useTemplateSlashItems(getRegisteredEditor)
+  const blockSlashItems = useBlockSlashItems(getRegisteredEditor)
+  const onSlashMenuSearch = useCallback(
+    async (query: string) => [
+      ...(await blockSlashItems(query)),
+      ...(await templateSlashItems(query)),
+    ],
+    [blockSlashItems, templateSlashItems],
   )
   const handleRef = useCallback(
     (handle: NoteEditorHandle | null) => {

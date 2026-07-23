@@ -276,6 +276,16 @@ const APP_COMMANDS: AppCommand[] = [
     },
   },
   {
+    id: 'note.insertBlockReference',
+    title: 'Insert block reference…',
+    keywords: ['block', 'reference', 'link', 'bullet'],
+    run: (context) => {
+      if (context.notePath() !== null) {
+        context.openBlockPicker?.()
+      }
+    },
+  },
+  {
     id: 'template.insert',
     title: 'Insert template…',
     keywords: ['snippet', 'boilerplate', 'stamp'],

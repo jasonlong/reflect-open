@@ -85,11 +85,9 @@ Selecting an unaddressed block intentionally counts as an explicit ID-minting ac
 
 ## Git workflow
 
-- Rebase on `upstream/master` after Plan 004 lands; push the topic branch only to `origin`.
-- Branch: `feat/block-reference-picker`.
-- Suggested commits: FTS query/edit primitive; session-safe address service; picker/provider; commands/slash UX.
-- PR title: `feat: insert references to existing note blocks`.
-- Open a fork-local ready-for-review PR targeting `jasonlong/reflect-open:master`; never push to the upstream remote.
+- Continue the linear stack on `jasonlong/reflect-open:block-ref`; keep fork `master` pristine.
+- Make one Plan 005 completion commit after search, mutation, picker, command/slash, docs, and verification gates pass.
+- Push only `block-ref` to `origin`; never push or open PRs in the upstream repository.
 
 ## Steps
 
