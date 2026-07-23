@@ -46,6 +46,12 @@ The suffix is storage syntax, not normal interface chrome. Meowdown removes it i
 
 ID markers are excluded from block text/Markdown, note plain text, task labels, breadcrumbs, snippets, FTS, and embeddings.
 
+## Rebuildable index projection
+
+Every parsed list item is projected into `blocks`, including items without IDs. The row stores its note-relative ordinal and source span, marker-free text and Markdown, and JSON breadcrumbs. `blocks_fts` indexes the marker-free text together with breadcrumb context and note title for bounded picker search. Apply, replace, move, remove, clear, and full rebuild update both projections together.
+
+Wiki-link rows retain both the folded complete target and, when syntactically valid, a folded base-note candidate plus fragment kind/value and reference-versus-embed syntax. The `backlinks` view resolves the complete target first and uses the base candidate only on an exact miss. `block_keys` exposes note-scoped claim counts; a count above one is ambiguous. General `backlinks` keeps missing and ambiguous fragment occurrences visible, while `block_backlinks` and `block_embed_places` contain only uniquely resolved targets. Embed places also assign each instance its source-note embed ordinal.
+
 ## Editing semantics
 
 - Moving or drag-reordering a list item carries its ID and addressed subtree.

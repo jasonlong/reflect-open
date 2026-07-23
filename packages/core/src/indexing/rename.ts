@@ -1,4 +1,4 @@
-import { renameWikiLink } from '../markdown/edit'
+import { renameWikiLink, type WikiLinkRenameCandidate } from '../markdown/wiki-link-rename'
 import { foldKey } from '../markdown/keys'
 import { wikiLinkTargetForTitle } from '../markdown/note-title'
 import type { Resolution } from '../markdown/resolve'
@@ -13,9 +13,18 @@ import { serializeWikiSuggestionAddress } from './suggest'
  * shared resolver.
  */
 
+/** One exact or fragment-base target spelling approved by index resolution. */
+export type RenameLinkCandidate = WikiLinkRenameCandidate
+
+/** Approved link rewrites grouped by source note. */
+export interface RenameLinkSource {
+  readonly sourcePath: string
+  readonly candidates: readonly RenameLinkCandidate[]
+}
+
 export interface RenameIo {
-  /** Distinct source paths of links whose folded target key matches. */
-  sources: (targetKey: string) => Promise<string[]>
+  /** Resolved source links owned by the renamed note, grouped by source path. */
+  sources: (targetKey: string, targetPath: string) => Promise<RenameLinkSource[]>
   read: (path: string) => Promise<string>
   /** Write with the graph generation pre-bound (stale → loud rejection). */
   write: (path: string, content: string) => Promise<void>
@@ -95,20 +104,22 @@ export async function rewriteLinksForTitleChange(
     return { rewritten: [], failed: [], collision: false, destinationBlocked: true }
   }
 
-  const sources = (await io.sources(foldKey(fromTarget))).filter((source) => source !== path)
+  const sources = (await io.sources(foldKey(fromTarget), path)).filter(
+    (source) => source.sourcePath !== path,
+  )
   const rewritten: string[] = []
   const failed: string[] = []
   let done = 0
   for (const source of sources) {
     try {
-      const content = await io.read(source)
-      const next = renameWikiLink(content, fromTarget, toTarget)
+      const content = await io.read(source.sourcePath)
+      const next = renameWikiLink(content, fromTarget, toTarget, source.candidates)
       if (next !== content) {
-        await io.write(source, next)
-        rewritten.push(source)
+        await io.write(source.sourcePath, next)
+        rewritten.push(source.sourcePath)
       }
     } catch {
-      failed.push(source)
+      failed.push(source.sourcePath)
     }
     done += 1
     onProgress?.(done, sources.length)

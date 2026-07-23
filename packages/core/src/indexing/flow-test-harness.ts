@@ -99,8 +99,9 @@ export function applyProjection(database: DatabaseSync, indexed: IndexedNote): v
 
   const insertLink = database.prepare(
     `INSERT INTO links(
-      source_path, kind, target_raw, target_key, alias, pos_from, pos_to
-    ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      source_path, kind, target_raw, target_key, target_base_key,
+      fragment_kind, fragment_value, wiki_syntax, alias, pos_from, pos_to
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   )
   for (const link of indexed.links) {
     insertLink.run(
@@ -108,9 +109,42 @@ export function applyProjection(database: DatabaseSync, indexed: IndexedNote): v
       link.kind,
       link.targetRaw,
       link.targetKey,
+      link.targetBaseKey,
+      link.fragmentKind,
+      link.fragmentValue,
+      link.wikiSyntax,
       link.alias,
       link.posFrom,
       link.posTo,
+    )
+  }
+
+  const insertBlock = database.prepare(
+    `INSERT INTO blocks(
+      note_path, ordinal, pos_from, pos_to, block_id, text, markdown, breadcrumbs
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+  )
+  const insertBlockFts = database.prepare(
+    `INSERT INTO blocks_fts(note_path, ordinal, text, context, note_title)
+     VALUES (?, ?, ?, ?, ?)`,
+  )
+  for (const block of indexed.blocks) {
+    insertBlock.run(
+      indexed.path,
+      block.ordinal,
+      block.posFrom,
+      block.posTo,
+      block.blockId,
+      block.text,
+      block.markdown,
+      JSON.stringify(block.breadcrumbs),
+    )
+    insertBlockFts.run(
+      indexed.path,
+      block.ordinal,
+      block.text,
+      block.breadcrumbs.join(' '),
+      indexed.title,
     )
   }
 }

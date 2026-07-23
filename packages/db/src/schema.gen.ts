@@ -22,12 +22,100 @@ export interface Assets {
 
 export interface Backlinks {
   alias: string | null;
+  fragmentKind: string | null;
+  fragmentValue: string | null;
   kind: string | null;
   posFrom: number | null;
   posTo: number | null;
   sourcePath: string | null;
   targetPath: string | null;
   targetRaw: string | null;
+  wikiSyntax: string | null;
+}
+
+export interface BlockBacklinks {
+  alias: string | null;
+  blockId: string | null;
+  claimCount: string | null;
+  posFrom: number | null;
+  posTo: number | null;
+  sourcePath: string | null;
+  targetOrdinal: string | null;
+  targetPath: string | null;
+  targetPosFrom: string | null;
+  targetPosTo: string | null;
+  targetRaw: string | null;
+  wikiSyntax: string | null;
+}
+
+export interface BlockEmbedPlaces {
+  alias: string | null;
+  blockId: string | null;
+  embedOrdinal: string | null;
+  posFrom: number | null;
+  posTo: number | null;
+  sourcePath: string | null;
+  targetOrdinal: string | null;
+  targetPath: string | null;
+  targetRaw: string | null;
+}
+
+export interface BlockKeys {
+  blockId: string | null;
+  claimCount: string | null;
+  notePath: string | null;
+  ordinal: string | null;
+  posFrom: string | null;
+  posTo: string | null;
+}
+
+export interface Blocks {
+  blockId: string | null;
+  breadcrumbs: Generated<string>;
+  markdown: string;
+  notePath: string;
+  ordinal: number;
+  posFrom: number;
+  posTo: number;
+  text: string;
+}
+
+export interface BlocksFts {
+  context: string | null;
+  notePath: string | null;
+  noteTitle: string | null;
+  ordinal: string | null;
+  text: string | null;
+}
+
+export interface BlocksFtsConfig {
+  k: string;
+  v: string | null;
+}
+
+export interface BlocksFtsContent {
+  c0: string | null;
+  c1: string | null;
+  c2: string | null;
+  c3: string | null;
+  c4: string | null;
+  id: Generated<number | null>;
+}
+
+export interface BlocksFtsData {
+  block: Buffer | null;
+  id: Generated<number | null>;
+}
+
+export interface BlocksFtsDocsize {
+  id: Generated<number | null>;
+  sz: Buffer | null;
+}
+
+export interface BlocksFtsIdx {
+  pgno: string | null;
+  segid: string;
+  term: string;
 }
 
 export interface ChatConversations {
@@ -66,12 +154,16 @@ export interface IndexMeta {
 
 export interface Links {
   alias: string | null;
+  fragmentKind: string | null;
+  fragmentValue: string | null;
   kind: string;
   posFrom: number;
   posTo: number;
   sourcePath: string;
+  targetBaseKey: string | null;
   targetKey: string;
   targetRaw: string;
+  wikiSyntax: string | null;
 }
 
 export interface NoteEmails {
@@ -136,6 +228,16 @@ export interface DB {
   aliases: Aliases;
   assets: Assets;
   backlinks: Backlinks;
+  blockBacklinks: BlockBacklinks;
+  blockEmbedPlaces: BlockEmbedPlaces;
+  blockKeys: BlockKeys;
+  blocks: Blocks;
+  blocksFts: BlocksFts;
+  blocksFtsConfig: BlocksFtsConfig;
+  blocksFtsContent: BlocksFtsContent;
+  blocksFtsData: BlocksFtsData;
+  blocksFtsDocsize: BlocksFtsDocsize;
+  blocksFtsIdx: BlocksFtsIdx;
   chatConversations: ChatConversations;
   chatMessages: ChatMessages;
   embeddingChunks: EmbeddingChunks;

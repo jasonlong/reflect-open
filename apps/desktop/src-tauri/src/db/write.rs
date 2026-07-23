@@ -42,6 +42,8 @@ pub struct IndexedNote {
     pub(super) asset_text: String,
     pub(super) preview: String,
     pub(super) links: Vec<IndexedLink>,
+    #[serde(default)]
+    pub(super) blocks: Vec<IndexedBlock>,
     pub(super) tags: Vec<IndexedTag>,
     pub(super) aliases: Vec<IndexedAlias>,
     /// Emails the note owns via `- Email:` contact-field bullets.
@@ -56,9 +58,25 @@ pub(super) struct IndexedLink {
     pub(super) kind: String,
     pub(super) target_raw: String,
     pub(super) target_key: String,
+    pub(super) target_base_key: Option<String>,
+    pub(super) fragment_kind: Option<String>,
+    pub(super) fragment_value: Option<String>,
+    pub(super) wiki_syntax: Option<String>,
     pub(super) alias: Option<String>,
     pub(super) pos_from: i64,
     pub(super) pos_to: i64,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct IndexedBlock {
+    pub(super) ordinal: i64,
+    pub(super) pos_from: i64,
+    pub(super) pos_to: i64,
+    pub(super) block_id: Option<String>,
+    pub(super) text: String,
+    pub(super) markdown: String,
+    pub(super) breadcrumbs: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -134,8 +152,8 @@ pub(super) fn apply_note(conn: &Connection, note: &IndexedNote) -> AppResult<()>
         .execute(params![note.path, note.text])?;
     {
         let mut stmt = conn.prepare_cached(
-            "INSERT INTO links(source_path, kind, target_raw, target_key, alias, pos_from, pos_to)
-             VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            "INSERT INTO links(source_path, kind, target_raw, target_key, target_base_key, fragment_kind, fragment_value, wiki_syntax, alias, pos_from, pos_to)
+             VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
         )?;
         for link in &note.links {
             stmt.execute(params![
@@ -143,9 +161,46 @@ pub(super) fn apply_note(conn: &Connection, note: &IndexedNote) -> AppResult<()>
                 link.kind,
                 link.target_raw,
                 link.target_key,
+                link.target_base_key,
+                link.fragment_kind,
+                link.fragment_value,
+                link.wiki_syntax,
                 link.alias,
                 link.pos_from,
                 link.pos_to
+            ])?;
+        }
+    }
+    {
+        let mut block_stmt = conn.prepare_cached(
+            "INSERT INTO blocks(note_path, ordinal, pos_from, pos_to, block_id, text, markdown, breadcrumbs)
+             VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+        )?;
+        let mut fts_stmt = conn.prepare_cached(
+            "INSERT INTO blocks_fts(note_path, ordinal, text, context, note_title)
+             VALUES(?1, ?2, ?3, ?4, ?5)",
+        )?;
+        for block in &note.blocks {
+            let breadcrumbs = serde_json::to_string(&block.breadcrumbs).map_err(|err| {
+                crate::error::AppError::io(format!("serialize block breadcrumbs: {err}"))
+            })?;
+            let context = block.breadcrumbs.join(" ");
+            block_stmt.execute(params![
+                note.path,
+                block.ordinal,
+                block.pos_from,
+                block.pos_to,
+                block.block_id,
+                block.text,
+                block.markdown,
+                breadcrumbs,
+            ])?;
+            fts_stmt.execute(params![
+                note.path,
+                block.ordinal,
+                block.text,
+                context,
+                note.title,
             ])?;
         }
     }
@@ -243,6 +298,10 @@ pub(super) fn move_note(conn: &Connection, from: &str, to: &str) -> AppResult<()
         .execute(params![from, to])?;
     conn.prepare_cached("UPDATE links SET source_path = ?2 WHERE source_path = ?1")?
         .execute(params![from, to])?;
+    conn.prepare_cached("UPDATE blocks SET note_path = ?2 WHERE note_path = ?1")?
+        .execute(params![from, to])?;
+    conn.prepare_cached("UPDATE blocks_fts SET note_path = ?2 WHERE note_path = ?1")?
+        .execute(params![from, to])?;
     conn.prepare_cached("UPDATE tags SET note_path = ?2 WHERE note_path = ?1")?
         .execute(params![from, to])?;
     conn.prepare_cached("UPDATE aliases SET note_path = ?2 WHERE note_path = ?1")?
@@ -265,7 +324,7 @@ pub(super) fn move_note(conn: &Connection, from: &str, to: &str) -> AppResult<()
 /// cleared explicitly. `index_meta` is intentionally preserved across a rebuild.
 pub(super) fn clear_index(conn: &Connection) -> AppResult<()> {
     conn.execute_batch(
-        "DELETE FROM notes; DELETE FROM search_fts;
+        "DELETE FROM notes; DELETE FROM search_fts; DELETE FROM blocks_fts;
          DELETE FROM embedding_vectors; DELETE FROM embedding_chunks;",
     )?;
     Ok(())
@@ -283,8 +342,10 @@ pub(super) fn touch_note(conn: &Connection, path: &str, mtime: i64) -> AppResult
 }
 
 /// Drop every row belonging to `path` (the `notes` row cascades to child
-/// tables; `search_fts` is standalone).
+/// tables; the FTS projections are standalone).
 pub(super) fn remove_note(conn: &Connection, path: &str) -> AppResult<()> {
+    conn.prepare_cached("DELETE FROM blocks_fts WHERE note_path = ?1")?
+        .execute(params![path])?;
     conn.prepare_cached("DELETE FROM notes WHERE path = ?1")?
         .execute(params![path])?;
     conn.prepare_cached("DELETE FROM search_fts WHERE path = ?1")?

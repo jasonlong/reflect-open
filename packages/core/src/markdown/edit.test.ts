@@ -9,12 +9,12 @@ import {
   clearTaskDueDate,
   editTaskLine,
   removeTaskLine,
-  renameWikiLink,
   setTaskDueDate,
   taskLineToBullet,
   TaskStaleError,
   toggleTaskMarker,
 } from './edit'
+import { renameWikiLink } from './wiki-link-rename'
 
 describe('renameWikiLink', () => {
   it('rewrites matching targets, preserves aliases, skips code and non-matches', () => {

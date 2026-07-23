@@ -9,6 +9,7 @@ import {
   gistBodyHash,
   isPinned,
   normalizeWikiTarget,
+  parseWikiAddressCandidates,
   pinnedOrder,
   splitFrontmatter,
   subjectAliases,
@@ -71,19 +72,48 @@ import { serializeWikiSuggestionAddress } from './suggest'
  * derived linkable aliases for rich titles and rich frontmatter aliases:
  * existing notes must reproject for both the recovery-semantics convergence
  * and the backfilled alias rows.
+ * 17 — addressable list blocks and exact-first wiki fragment candidates.
  */
-export const PROJECTION_VERSION = 16
+export const PROJECTION_VERSION = 17
 
 export const indexedLinkSchema = z.object({
   kind: z.enum(['wiki', 'md']),
   targetRaw: z.string(),
-  /** Normalized match key: case-folded wiki target, or the lowercased href for md links. */
+  /** Normalized match key for the full exact target. */
   targetKey: z.string(),
+  /** Normalized base-note candidate, or null when no fragment parses. */
+  targetBaseKey: z.string().nullable(),
+  fragmentKind: z.enum(['heading', 'block']).nullable(),
+  fragmentValue: z.string().nullable(),
+  wikiSyntax: z.enum(['reference', 'embed']).nullable(),
   alias: z.string().nullable(),
   posFrom: z.number(),
   posTo: z.number(),
 })
 export type IndexedLink = z.infer<typeof indexedLinkSchema>
+
+const blockBreadcrumbsSchema = z.array(z.string()).readonly()
+
+export const indexedBlockSchema = z.object({
+  ordinal: z.number(),
+  posFrom: z.number(),
+  posTo: z.number(),
+  blockId: z.string().nullable(),
+  text: z.string(),
+  markdown: z.string(),
+  breadcrumbs: blockBreadcrumbsSchema,
+})
+export type IndexedBlock = z.infer<typeof indexedBlockSchema>
+
+/** Encode ordered block ancestry for the `blocks.breadcrumbs` JSON column. */
+export function encodeBlockBreadcrumbs(breadcrumbs: readonly string[]): string {
+  return JSON.stringify(breadcrumbs)
+}
+
+/** Validate and decode the `blocks.breadcrumbs` JSON column. */
+export function decodeBlockBreadcrumbs(column: string): readonly string[] {
+  return blockBreadcrumbsSchema.parse(JSON.parse(column))
+}
 
 export const indexedTagSchema = z.object({
   /** Display casing (first-seen in the document). */
@@ -172,6 +202,7 @@ export const indexedNoteSchema = z.object({
   /** The All Notes row snippet, derived once here rather than per query. */
   preview: z.string(),
   links: z.array(indexedLinkSchema),
+  blocks: z.array(indexedBlockSchema),
   tags: z.array(indexedTagSchema),
   aliases: z.array(indexedAliasSchema),
   /** Emails the note owns via `- Email:` contact-field bullets. */
@@ -232,18 +263,37 @@ export function buildIndexedNote(
   parsed: ParsedNote,
   meta: { fileHash: string; mtime: number; source: string; assetText?: string },
 ): IndexedNote {
-  const wikiLinks: IndexedLink[] = parsed.wikiLinks.map((link) => ({
-    kind: 'wiki',
-    targetRaw: link.target,
-    targetKey: normalizeWikiTarget(link.target).key,
-    alias: link.alias ?? null,
-    posFrom: link.from,
-    posTo: link.to,
-  }))
+  const wikiLinks: IndexedLink[] = parsed.wikiLinks.map((link) => {
+    const candidates = parseWikiAddressCandidates(link.target)
+    return {
+      kind: 'wiki',
+      targetRaw: link.target,
+      targetKey: normalizeWikiTarget(candidates.exactTarget).key,
+      targetBaseKey:
+        candidates.fragmented === null
+          ? null
+          : normalizeWikiTarget(candidates.fragmented.noteTarget).key,
+      fragmentKind: candidates.fragmented?.fragment.kind ?? null,
+      fragmentValue:
+        candidates.fragmented === null
+          ? null
+          : candidates.fragmented.fragment.kind === 'block'
+            ? candidates.fragmented.fragment.id
+            : candidates.fragmented.fragment.value,
+      wikiSyntax: link.syntax,
+      alias: link.alias ?? null,
+      posFrom: link.from,
+      posTo: link.to,
+    }
+  })
   const mdLinks: IndexedLink[] = parsed.links.map((link) => ({
     kind: 'md',
     targetRaw: link.href,
     targetKey: link.href.toLowerCase(),
+    targetBaseKey: null,
+    fragmentKind: null,
+    fragmentValue: null,
+    wikiSyntax: null,
     alias: null,
     posFrom: link.from,
     posTo: link.to,
@@ -273,6 +323,15 @@ export function buildIndexedNote(
     assetText: meta.assetText ?? '',
     preview: previewSnippet(parsed.text, parsed.title),
     links: [...wikiLinks, ...mdLinks],
+    blocks: parsed.blocks.map((block) => ({
+      ordinal: block.ordinal,
+      posFrom: block.from,
+      posTo: block.to,
+      blockId: block.id,
+      text: block.text,
+      markdown: block.markdown,
+      breadcrumbs: block.breadcrumbs,
+    })),
     tags: parsed.tags.map((tag) => ({ tag, tagKey: foldTag(tag) })),
     aliases: projectNoteAliases(parsed),
     emails: extractEmailFields(body).map((email) => ({ email, emailKey: foldEmail(email) })),

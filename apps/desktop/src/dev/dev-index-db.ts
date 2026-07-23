@@ -1,5 +1,10 @@
 import sqlite3InitModule, { type Database, type SqlValue } from '@sqlite.org/sqlite-wasm'
-import { encodeTaskBreadcrumbs, ReflectError, type IndexedNote } from '@reflect/core'
+import {
+  encodeBlockBreadcrumbs,
+  encodeTaskBreadcrumbs,
+  ReflectError,
+  type IndexedNote,
+} from '@reflect/core'
 
 /**
  * The dev bridge's SQLite index: the real `crates/index-schema` migrations
@@ -136,9 +141,44 @@ export async function createDevIndexDb(): Promise<DevIndexDb> {
       for (const link of note.links) {
         run(
           db,
-          `INSERT INTO links(source_path, kind, target_raw, target_key, alias, pos_from, pos_to)
-           VALUES(?, ?, ?, ?, ?, ?, ?)`,
-          [note.path, link.kind, link.targetRaw, link.targetKey, link.alias, link.posFrom, link.posTo],
+          `INSERT INTO links(source_path, kind, target_raw, target_key, target_base_key, fragment_kind, fragment_value, wiki_syntax, alias, pos_from, pos_to)
+           VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            note.path,
+            link.kind,
+            link.targetRaw,
+            link.targetKey,
+            link.targetBaseKey,
+            link.fragmentKind,
+            link.fragmentValue,
+            link.wikiSyntax,
+            link.alias,
+            link.posFrom,
+            link.posTo,
+          ],
+        )
+      }
+      for (const block of note.blocks) {
+        run(
+          db,
+          `INSERT INTO blocks(note_path, ordinal, pos_from, pos_to, block_id, text, markdown, breadcrumbs)
+           VALUES(?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            note.path,
+            block.ordinal,
+            block.posFrom,
+            block.posTo,
+            block.blockId,
+            block.text,
+            block.markdown,
+            encodeBlockBreadcrumbs(block.breadcrumbs),
+          ],
+        )
+        run(
+          db,
+          `INSERT INTO blocks_fts(note_path, ordinal, text, context, note_title)
+           VALUES(?, ?, ?, ?, ?)`,
+          [note.path, block.ordinal, block.text, block.breadcrumbs.join(' '), note.title],
         )
       }
       for (const tag of note.tags) {
@@ -204,6 +244,8 @@ export async function createDevIndexDb(): Promise<DevIndexDb> {
         run(db, 'UPDATE notes SET path = ? WHERE path = ?', [to, from])
         run(db, 'UPDATE note_text SET note_path = ? WHERE note_path = ?', [to, from])
         run(db, 'UPDATE links SET source_path = ? WHERE source_path = ?', [to, from])
+        run(db, 'UPDATE blocks SET note_path = ? WHERE note_path = ?', [to, from])
+        run(db, 'UPDATE blocks_fts SET note_path = ? WHERE note_path = ?', [to, from])
         run(db, 'UPDATE tags SET note_path = ? WHERE note_path = ?', [to, from])
         run(db, 'UPDATE aliases SET note_path = ? WHERE note_path = ?', [to, from])
         run(db, 'UPDATE note_emails SET note_path = ? WHERE note_path = ?', [to, from])
@@ -224,7 +266,7 @@ export async function createDevIndexDb(): Promise<DevIndexDb> {
 
     clear: () => {
       db.exec(
-        `DELETE FROM notes; DELETE FROM search_fts;
+        `DELETE FROM notes; DELETE FROM search_fts; DELETE FROM blocks_fts;
          DELETE FROM embedding_vectors; DELETE FROM embedding_chunks;`,
       )
     },
@@ -282,6 +324,7 @@ export async function createDevIndexDb(): Promise<DevIndexDb> {
 }
 
 function removeNote(db: Database, path: string): void {
+  run(db, 'DELETE FROM blocks_fts WHERE note_path = ?', [path])
   run(db, 'DELETE FROM notes WHERE path = ?', [path])
   run(db, 'DELETE FROM search_fts WHERE path = ?', [path])
 }

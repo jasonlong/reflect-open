@@ -1,6 +1,6 @@
 import {
   errorMessage,
-  getLinkSources,
+  getRenameLinkSources,
   isReflectManagedNote,
   readNote,
   resolveWikiTarget,
@@ -135,7 +135,7 @@ export function createRenameCoordinator(options: RenameCoordinatorOptions): Rena
             from,
             to: rename.to,
             io: {
-              sources: getLinkSources,
+              sources: getRenameLinkSources,
               read: readNote,
               write: (forPath, contents) => writeNote(forPath, contents, gen),
               resolve: resolveWikiTarget,

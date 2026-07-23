@@ -8,11 +8,13 @@ import {
   type Resolution,
 } from '../markdown'
 import { db } from './db'
+import type { RenameLinkCandidate, RenameLinkSource } from './rename'
 import { inClauseChunks } from './query-utils'
 export {
   getBacklinks,
   getBacklinksWithContext,
   type Backlink,
+  type BlockAvailability,
   type BacklinkContext,
   type BacklinkContextPage,
   type BacklinkContextPageOptions,
@@ -43,6 +45,57 @@ export async function getLinkSources(targetKey: string): Promise<string[]> {
     .orderBy('sourcePath')
     .execute()
   return rows.map((row) => row.sourcePath)
+}
+
+/**
+ * Link targets that currently resolve to `targetPath` and should be rewritten
+ * when that note changes title. Joining the exact-first backlinks view prevents
+ * a literal note title containing `#` from being mistaken for a fragment.
+ */
+export async function getRenameLinkSources(
+  targetKey: string,
+  targetPath: string,
+): Promise<RenameLinkSource[]> {
+  const rows = await db
+    .selectFrom('backlinks')
+    .innerJoin('links', (join) =>
+      join
+        .onRef('links.sourcePath', '=', 'backlinks.sourcePath')
+        .onRef('links.posFrom', '=', 'backlinks.posFrom')
+        .onRef('links.posTo', '=', 'backlinks.posTo'),
+    )
+    .where('backlinks.targetPath', '=', targetPath)
+    .where((expression) =>
+      expression.or([
+        expression('links.targetKey', '=', targetKey),
+        expression('links.targetBaseKey', '=', targetKey),
+      ]),
+    )
+    .select([
+      'links.sourcePath',
+      'links.targetRaw',
+      'backlinks.fragmentKind',
+    ])
+    .orderBy('links.sourcePath')
+    .orderBy('links.posFrom')
+    .execute()
+
+  const grouped = new Map<string, RenameLinkCandidate[]>()
+  for (const row of rows) {
+    const candidates = grouped.get(row.sourcePath) ?? []
+    const candidate: RenameLinkCandidate = {
+      target: row.targetRaw,
+      mode: row.fragmentKind === null ? 'exact' : 'fragment-base',
+    }
+    const alreadyIncluded = candidates.some(
+      (existing) => existing.target === candidate.target && existing.mode === candidate.mode,
+    )
+    if (!alreadyIncluded) {
+      candidates.push(candidate)
+    }
+    grouped.set(row.sourcePath, candidates)
+  }
+  return [...grouped].map(([sourcePath, candidates]) => ({ sourcePath, candidates }))
 }
 
 /** One pinned note, as the sidebar's Pinned section lists it. */

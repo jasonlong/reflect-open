@@ -22,6 +22,13 @@ function context(sourcePath: string, snippet: string, posFrom: number): Backlink
     snippet,
     posFrom,
     tasks: [],
+    fragmentKind: null,
+    fragmentValue: null,
+    wikiSyntax: 'reference',
+    blockAvailability: null,
+    targetBlockId: null,
+    targetBlockOrdinal: null,
+    targetBlockText: null,
   }
 }
 

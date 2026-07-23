@@ -1,6 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { resolved, unresolved } from '../markdown'
-import { nextAliases, rewriteLinksForTitleChange, type RenameIo } from './rename'
+import {
+  foldKey,
+  parseNote,
+  parseWikiAddressCandidates,
+  resolved,
+  unresolved,
+} from '../markdown'
+import {
+  nextAliases,
+  rewriteLinksForTitleChange,
+  type RenameIo,
+  type RenameLinkCandidate,
+} from './rename'
 
 function fakeIo(
   files: Record<string, string>,
@@ -8,7 +19,25 @@ function fakeIo(
 ) {
   const writes: Record<string, string> = {}
   const io: RenameIo = {
-    sources: async () => Object.keys(files).sort(),
+    sources: async (targetKey) =>
+      Object.entries(files)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .flatMap(([sourcePath, source]) => {
+          const candidates = parseNote({ path: sourcePath, source }).wikiLinks.flatMap<RenameLinkCandidate>((link) => {
+            const address = parseWikiAddressCandidates(link.target)
+            if (foldKey(address.exactTarget) === targetKey) {
+              return [{ target: link.target, mode: 'exact' as const }]
+            }
+            if (
+              address.fragmented !== null &&
+              foldKey(address.fragmented.noteTarget) === targetKey
+            ) {
+              return [{ target: link.target, mode: 'fragment-base' as const }]
+            }
+            return []
+          })
+          return candidates.length === 0 ? [] : [{ sourcePath, candidates }]
+        }),
     read: async (path) => {
       const content = files[path]
       if (content === undefined) {
@@ -78,6 +107,47 @@ describe('rewriteLinksForTitleChange', () => {
     )
   })
 
+  it('preserves heading and block fragments, aliases, and embed syntax', async () => {
+    const { io, writes } = fakeIo({
+      'notes/source.md':
+        '[[Old#Plan]]\n[[Old#^abc|decision]]\n![[Old#^embed]]\n',
+    })
+    await rewriteLinksForTitleChange({
+      path: 'notes/target.md',
+      from: 'Old',
+      to: 'New',
+      io,
+    })
+    expect(writes['notes/source.md']).toBe(
+      '[[New#Plan]]\n[[New#^abc|decision]]\n![[New#^embed]]\n',
+    )
+  })
+
+  it('does not rewrite a literal hash title excluded by exact-first resolution', async () => {
+    const files = {
+      'notes/source.md': '[[Old#Literal]] and [[Old#Other]] and [[Old]]\n',
+    }
+    const { io, writes } = fakeIo(files)
+    io.sources = async () => [
+      {
+        sourcePath: 'notes/source.md',
+        candidates: [
+          { target: 'Old#Other', mode: 'fragment-base' },
+          { target: 'Old', mode: 'exact' },
+        ],
+      },
+    ]
+    await rewriteLinksForTitleChange({
+      path: 'notes/target.md',
+      from: 'Old',
+      to: 'New',
+      io,
+    })
+    expect(writes['notes/source.md']).toBe(
+      '[[Old#Literal]] and [[New#Other]] and [[New]]\n',
+    )
+  })
+
   it('leaves links alone when the old title belongs to a different note now', async () => {
     const { io, writes } = fakeIo(
       { 'notes/a.md': '[[Old Title]]\n' },
@@ -111,7 +181,16 @@ describe('rewriteLinksForTitleChange', () => {
   it('continues past a failing source and reports it', async () => {
     const files: Record<string, string> = { 'notes/ok.md': '[[Old]] here\n' }
     const { io, writes } = fakeIo(files)
-    const sources = ['notes/gone.md', 'notes/ok.md'] // gone.md read throws
+    const sources = [
+      {
+        sourcePath: 'notes/gone.md',
+        candidates: [{ target: 'Old', mode: 'exact' as const }],
+      },
+      {
+        sourcePath: 'notes/ok.md',
+        candidates: [{ target: 'Old', mode: 'exact' as const }],
+      },
+    ] // gone.md read throws
     io.sources = async () => sources
     const progress: Array<[number, number]> = []
     const result = await rewriteLinksForTitleChange({

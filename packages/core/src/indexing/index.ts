@@ -41,15 +41,19 @@ export {
 export { listTemplates, type TemplateEntry } from './template-list'
 export {
   buildIndexedNote,
+  decodeBlockBreadcrumbs,
+  encodeBlockBreadcrumbs,
   decodeTaskBreadcrumbs,
   encodeTaskBreadcrumbs,
   indexedNoteSchema,
   indexedLinkSchema,
+  indexedBlockSchema,
   indexedTagSchema,
   indexedAliasSchema,
   PROJECTION_VERSION,
   type IndexedNote,
   type IndexedLink,
+  type IndexedBlock,
   type IndexedTag,
   type IndexedAlias,
 } from './indexed-note'
@@ -63,6 +67,13 @@ export {
   type IndexPassOptions,
 } from './indexer'
 export {
+  getBlockById,
+  resolveWikiAddress,
+  type BlockLookup,
+  type BlockProjection,
+  type ResolvedWikiAddress,
+} from './queries-blocks'
+export {
   dailyDatesInRange,
   getBacklinks,
   getBacklinksWithContext,
@@ -70,6 +81,7 @@ export {
   getDuplicateNoteIds,
   getIndexMeta,
   getLinkSources,
+  getRenameLinkSources,
   getNote,
   getNotesByTag,
   getOpenTasks,
@@ -83,6 +95,7 @@ export {
   listDailyNotes,
   resolveWikiTarget,
   type Backlink,
+  type BlockAvailability,
   type BacklinkContext,
   type BacklinkContextPage,
   type BacklinkContextPageOptions,
@@ -157,6 +170,8 @@ export {
   rewriteLinksForTitleChange,
   nextAliases,
   type RenameIo,
+  type RenameLinkCandidate,
+  type RenameLinkSource,
   type TitleRenameRewriteOptions,
   type TitleRenameRewriteResult,
 } from './rename'

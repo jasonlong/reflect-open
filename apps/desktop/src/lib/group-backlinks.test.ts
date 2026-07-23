@@ -1,12 +1,35 @@
 import { describe, expect, it } from 'vitest'
+import type { BacklinkContext } from '@reflect/core'
 import { groupBacklinksBySource } from './group-backlinks'
+
+function context(
+  sourcePath: string,
+  sourceTitle: string,
+  snippet: string,
+  posFrom: number,
+): BacklinkContext {
+  return {
+    sourcePath,
+    sourceTitle,
+    snippet,
+    posFrom,
+    tasks: [],
+    fragmentKind: null,
+    fragmentValue: null,
+    wikiSyntax: 'reference',
+    blockAvailability: null,
+    targetBlockId: null,
+    targetBlockOrdinal: null,
+    targetBlockText: null,
+  }
+}
 
 describe('groupBacklinksBySource', () => {
   it('groups rows by source note, preserving order and per-link keys', () => {
     const groups = groupBacklinksBySource([
-      { sourcePath: 'notes/a.md', sourceTitle: 'A', snippet: 'first [[t]]', posFrom: 4, tasks: [] },
-      { sourcePath: 'notes/a.md', sourceTitle: 'A', snippet: 'second [[t]]', posFrom: 40, tasks: [] },
-      { sourcePath: 'notes/b.md', sourceTitle: 'B', snippet: 'only [[t]]', posFrom: 9, tasks: [] },
+      context('notes/a.md', 'A', 'first [[t]]', 4),
+      context('notes/a.md', 'A', 'second [[t]]', 40),
+      context('notes/b.md', 'B', 'only [[t]]', 9),
     ])
 
     expect(groups).toEqual([
@@ -28,7 +51,7 @@ describe('groupBacklinksBySource', () => {
 
   it('drops empty snippets but keeps the source group', () => {
     const groups = groupBacklinksBySource([
-      { sourcePath: 'notes/gone.md', sourceTitle: 'Gone', snippet: '', posFrom: 0, tasks: [] },
+      context('notes/gone.md', 'Gone', '', 0),
     ])
     expect(groups).toEqual([{ path: 'notes/gone.md', title: 'Gone', snippets: [] }])
   })
