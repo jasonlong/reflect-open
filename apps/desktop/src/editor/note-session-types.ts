@@ -150,6 +150,8 @@ export interface NoteSession {
    * Plan 21) — everything reactive should keep using snapshots.
    */
   isDirty: () => boolean
+  /** Whether an explicit editor mutation can be persisted through this session now. */
+  canCommitEditorChange: () => boolean
   /**
    * Patch frontmatter keys (e.g. `aliases`, Plan 07b) without touching the
    * editor: the header is updated in place and saved through the normal

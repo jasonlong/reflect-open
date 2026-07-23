@@ -260,7 +260,7 @@ export function RouterProvider({
           const stack = current.stack.map((entry) => {
             if (entry.route.kind === 'note' && entry.route.path === from) {
               changed = true
-              return { ...entry, route: { kind: 'note' as const, path: to } }
+              return { ...entry, route: { ...entry.route, path: to } }
             }
             return entry
           })

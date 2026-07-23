@@ -12,9 +12,17 @@ app state, never a remote control.
 reflect://today                     the daily stream, on today
 reflect://daily/2026-07-01          a specific day (ISO YYYY-MM-DD)
 reflect://note/<target>             a note — see resolution below
+reflect://note/<target>#Heading     a heading in that note
+reflect://note/<target>#^block-id   an addressable list block
 reflect://search?q=meeting          the search screen, query prefilled
 reflect://tasks                     the tasks view
 ```
+
+The fragment is parsed separately from the percent-encoded target. For example,
+`reflect://note/Project%23Plan#^decision` addresses block `decision` in a note
+whose target is literally `Project#Plan`. Heading and block fragments survive
+history, secondary windows, note moves, and cold-launch handling. Positional
+block hints are deliberately in-process only and never serialize to URLs.
 
 `<target>` resolves like the CLI's `<note>` argument, with the frontmatter
 `id` first because it survives renames:
@@ -33,7 +41,9 @@ resolve **in the open graph**; there is no cross-graph addressing.
 clipboard, minting an `id:` into the note's frontmatter on first copy for
 notes that predate ids — so a copied link outlives any rename. Daily notes
 are addressed by date instead. A human-written
-`reflect://note/Project%20X` works too, via title resolution.
+`reflect://note/Project%20X` works too, via title resolution. **Copy block deep
+link** uses that same stable note identity plus `#^block-id`; it mints the block
+ID only when explicitly invoked and waits for the note save before copying.
 
 ## Write links
 

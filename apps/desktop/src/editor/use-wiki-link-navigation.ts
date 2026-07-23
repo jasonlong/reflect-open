@@ -2,8 +2,10 @@ import { useCallback } from 'react'
 import {
   errorMessage,
   normalizeWikiTarget,
+  parseWikiAddressCandidates,
   resolveExistingWikiTarget,
   resolveOrCreateNoteWithTitle,
+  resolveWikiAddress,
   resolveWikiTarget,
 } from '@reflect/core'
 import { reportAmbiguousNoteTitle } from '@/editor/ambiguous-note-feedback'
@@ -11,6 +13,14 @@ import { useNoteLinkNavigation } from '@/hooks/use-note-link-navigation'
 import { startOperation } from '@/lib/operations'
 import { useLinkIntentGuard } from '@/lib/windows/use-link-intent-guard'
 import { routeForPath, type NoteRoute } from '@/routing/route'
+
+function reportUnavailableBlock(reason: 'missing' | 'ambiguous'): void {
+  startOperation('Opening link').fail(
+    reason === 'ambiguous'
+      ? 'That block reference is ambiguous because its source note contains the same block ID more than once.'
+      : 'That block is no longer available.',
+  )
+}
 
 function reportUnavailableNoteTitle(title: string): void {
   startOperation('Opening link').fail(
@@ -61,6 +71,38 @@ export function useWikiLinkNavigation(
           if (normalized.raw === '') {
             return
           }
+
+          const candidates = parseWikiAddressCandidates(normalized.raw)
+          if (candidates.fragmented !== null) {
+            const address = await resolveWikiAddress(normalized.raw)
+            if (isStale()) {
+              return
+            }
+            if (address.kind === 'heading') {
+              open(routeForPath(address.path, { kind: 'heading', value: address.heading }))
+              return
+            }
+            if (address.kind === 'block') {
+              open(routeForPath(address.path, { kind: 'block', id: address.blockId }))
+              return
+            }
+            if (address.kind === 'ambiguousBlock') {
+              reportUnavailableBlock('ambiguous')
+              return
+            }
+            if (address.kind === 'missing' && address.fragmentKind === 'block') {
+              reportUnavailableBlock('missing')
+              return
+            }
+            if (address.kind === 'note' && generation === null) {
+              open(routeForPath(address.path))
+              return
+            }
+            // Exact note results with a writable graph continue through the
+            // ambiguity-preserving resolver below. A complete miss with no
+            // resolvable base retains ordinary create-full-target behavior.
+          }
+
           if (normalized.date !== undefined) {
             if (generation === null) {
               const resolution = await resolveWikiTarget(normalized.raw)

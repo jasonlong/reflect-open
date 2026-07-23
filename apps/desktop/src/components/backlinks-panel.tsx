@@ -1,10 +1,13 @@
-import { type ReactElement } from 'react'
+import { useCallback, type ReactElement } from 'react'
 import { ChevronRight } from 'lucide-react'
 import { BacklinkLoadMore } from '@/components/backlink-load-more'
 import { BacklinkSourceGroup } from '@/components/backlink-source-group'
 import { useBacklinkNavigation } from '@/hooks/use-backlink-navigation'
 import { useBacklinkSources } from '@/hooks/use-backlink-sources'
 import { useBacklinksExpanded } from '@/hooks/use-backlinks-expanded'
+import { noteEditorHandleFor } from '@/editor/editor-handle-registry'
+import type { BacklinkSnippetData } from '@/lib/group-backlinks'
+import { startOperation } from '@/lib/operations'
 
 interface BacklinksPanelProps {
   /** Graph-relative path of the note whose inbound links to show. */
@@ -39,6 +42,27 @@ export function BacklinksPanel({ path }: BacklinksPanelProps): ReactElement | nu
   } = useBacklinkSources(path)
   const [expanded, setExpanded] = useBacklinksExpanded()
   const { openSource, onWikilinkClick, resolveImageUrl } = useBacklinkNavigation()
+  const revealTarget = useCallback(
+    (snippet: BacklinkSnippetData) => {
+      const editor = noteEditorHandleFor(path)
+      const revealed =
+        snippet.fragmentKind === 'heading' && snippet.fragmentValue !== null
+          ? editor?.revealHeading(snippet.fragmentValue) ?? false
+          : snippet.fragmentKind === 'block' &&
+              snippet.fragmentValue !== null &&
+              snippet.blockAvailability === 'resolved'
+            ? editor?.revealBlock({ id: snippet.fragmentValue }) ?? false
+            : false
+      if (!revealed) {
+        startOperation('Opening backlink target').warn(
+          snippet.fragmentKind === 'heading'
+            ? 'That heading is no longer available.'
+            : 'That block is no longer available.',
+        )
+      }
+    },
+    [path],
+  )
 
   if (isError) {
     return (
@@ -95,6 +119,7 @@ export function BacklinksPanel({ path }: BacklinksPanelProps): ReactElement | nu
             onOpen={openSource}
             onWikilinkClick={onWikilinkClick}
             resolveImageUrl={resolveImageUrl}
+            onRevealTarget={revealTarget}
           />
         ))}
         <BacklinkLoadMore

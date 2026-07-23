@@ -91,11 +91,9 @@ export type NoteFragment =
 
 ## Git workflow
 
-- Fetch/rebase on `upstream/master` immediately before branching; push the topic branch only to `origin`.
-- Branch: `feat/block-navigation`.
-- Suggested commits: route/deep links; reveal/wiki navigation; copy actions; backlinks UI/docs.
-- PR title: `feat: link directly to note blocks`.
-- Open a fork-local ready-for-review PR targeting `jasonlong/reflect-open:master`; never push to the upstream remote.
+- Continue the linear stack on `jasonlong/reflect-open:block-ref`; keep fork `master` pristine.
+- Make one Plan 004 completion commit after all route, reveal, copy, backlink, and docs gates pass.
+- Push only `block-ref` to `origin`; never push or open PRs in the upstream repository.
 
 ## Steps
 

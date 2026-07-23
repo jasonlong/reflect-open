@@ -56,25 +56,53 @@ describe('parseDeepLink', () => {
     expect(parseDeepLink('reflect://note/Project%20X')).toEqual({
       kind: 'openNote',
       target: 'Project X',
+      fragment: null,
     })
     expect(parseDeepLink('reflect://note/notes/foo.md')).toEqual({
       kind: 'openNote',
       target: 'notes/foo.md',
+      fragment: null,
     })
     expect(parseDeepLink('reflect://note/notes%2Ffoo.md')).toEqual({
       kind: 'openNote',
       target: 'notes/foo.md',
+      fragment: null,
     })
     expect(parseDeepLink('reflect://note/x7Kp2q')).toEqual({
       kind: 'openNote',
       target: 'x7Kp2q',
+      fragment: null,
     })
   })
 
-  it('rejects an empty note target and malformed percent-encoding', () => {
+  it('parses heading and block fragments separately from encoded note targets', () => {
+    expect(parseDeepLink('reflect://note/Project%23Plan#Overview%20%26%20scope')).toEqual({
+      kind: 'openNote',
+      target: 'Project#Plan',
+      fragment: { kind: 'heading', value: 'Overview & scope' },
+    })
+    expect(parseDeepLink('reflect://note/abc#^Block-7')).toEqual({
+      kind: 'openNote',
+      target: 'abc',
+      fragment: { kind: 'block', id: 'Block-7' },
+    })
+    expect(parseDeepLink('reflect://daily/2026-07-01#^today-block')).toEqual({
+      kind: 'navigate',
+      route: {
+        kind: 'daily',
+        date: '2026-07-01',
+        fragment: { kind: 'block', id: 'today-block' },
+      },
+    })
+  })
+
+  it('rejects empty targets and malformed fragments or percent-encoding', () => {
     expect(parseDeepLink('reflect://note')).toBeNull()
     expect(parseDeepLink('reflect://note/')).toBeNull()
     expect(parseDeepLink('reflect://note/%E0%A4%A')).toBeNull()
+    expect(parseDeepLink('reflect://note/abc#^invalid_id')).toBeNull()
+    expect(parseDeepLink('reflect://note/abc#%E0%A4%A')).toBeNull()
+    expect(parseDeepLink('reflect://today#Heading')).toBeNull()
   })
 
   it('parses write links into capture payloads', () => {

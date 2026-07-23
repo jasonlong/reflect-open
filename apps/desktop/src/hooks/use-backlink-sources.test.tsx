@@ -100,19 +100,19 @@ describe('useBacklinkSources', () => {
     })
 
     await vi.waitFor(() => expect(result.current.isFetchingNextPage).toBe(false))
-    expect(result.current.groups).toEqual([
+    expect(result.current.groups).toMatchObject([
       {
         path: 'notes/a.md',
         title: 'notes/a.md',
         snippets: [
-          { key: 'notes/a.md:1', text: 'shared context', tasks: [] },
-          { key: 'notes/a.md:2', text: 'first-page context', tasks: [] },
+          { key: 'notes/a.md:1::', text: 'shared context', tasks: [] },
+          { key: 'notes/a.md:2::', text: 'first-page context', tasks: [] },
         ],
       },
       {
         path: 'notes/b.md',
         title: 'notes/b.md',
-        snippets: [{ key: 'notes/b.md:3', text: 'second-page context', tasks: [] }],
+        snippets: [{ key: 'notes/b.md:3::', text: 'second-page context', tasks: [] }],
       },
     ])
     expect(result.current.count).toBe(12)

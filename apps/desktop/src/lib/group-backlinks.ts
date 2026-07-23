@@ -8,6 +8,10 @@ export interface BacklinkSnippetData {
   text: string
   /** The snippet's checkbox tasks anchored to the source note, render order. */
   tasks: SnippetTask[]
+  fragmentKind: string | null
+  fragmentValue: string | null
+  blockAvailability: BacklinkContext['blockAvailability']
+  targetBlockText: string | null
 }
 
 /** One referencing note: its identity plus every linking line found in it. */
@@ -38,9 +42,13 @@ export function groupBacklinksBySource(
     }
     if (backlink.snippet !== '') {
       group.snippets.push({
-        key: `${backlink.sourcePath}:${backlink.posFrom}`,
+        key: `${backlink.sourcePath}:${backlink.posFrom}:${backlink.fragmentKind ?? ''}:${backlink.fragmentValue ?? ''}`,
         text: backlink.snippet,
         tasks: backlink.tasks,
+        fragmentKind: backlink.fragmentKind ?? null,
+        fragmentValue: backlink.fragmentValue ?? null,
+        blockAvailability: backlink.blockAvailability ?? null,
+        targetBlockText: backlink.targetBlockText ?? null,
       })
     }
   }

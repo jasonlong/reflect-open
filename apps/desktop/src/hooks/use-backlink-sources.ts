@@ -44,7 +44,7 @@ function groupLoadedBacklinks(pages: readonly BacklinkContextPage[]): BacklinkSo
   for (const page of pages) {
     for (const context of page.contexts) {
       if (context.snippet !== '') {
-        const key = `${context.sourcePath}\u0000${context.snippet}`
+        const key = `${context.sourcePath}\u0000${context.snippet}\u0000${context.fragmentKind ?? ''}\u0000${context.fragmentValue ?? ''}`
         if (seenContexts.has(key)) {
           continue
         }

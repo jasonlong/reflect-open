@@ -27,6 +27,7 @@ import { NoteEditor, type NoteEditorHandle } from '@/editor/note-editor'
 import { resolveAssetFileLink, useAssetPersistence } from '@/editor/use-asset-persistence'
 import { useEditorAutocomplete } from '@/editor/use-editor-autocomplete'
 import { useNoteDocument } from '@/editor/use-note-document'
+import { useNoteFragmentReveal } from '@/editor/use-note-fragment-reveal'
 import { useTagNavigation } from '@/editor/use-tag-navigation'
 import { useTemplateSlashItems } from '@/editor/use-template-slash-items'
 import { useWikiLinkNavigation } from '@/editor/use-wiki-link-navigation'
@@ -182,6 +183,12 @@ export function NotePaneComponent({
   const { onWikilinkSearch, onTagSearch } = useEditorAutocomplete()
 
   const bindEditor = document.bindEditor
+  const [fragmentEditor, setFragmentEditor] = useState<NoteEditorHandle | null>(null)
+  useNoteFragmentReveal({
+    path,
+    ready: document.status === 'ready' && !document.protected,
+    editor: fragmentEditor,
+  })
   const aiEditorRef = useRef<NoteEditorHandle | null>(null)
   // The registry entry this pane made, so unmount removes exactly it (a
   // remount of the same path may already have re-registered).
@@ -195,6 +202,7 @@ export function NotePaneComponent({
   const handleRef = useCallback(
     (handle: NoteEditorHandle | null) => {
       bindEditor(handle)
+      setFragmentEditor(handle)
       aiEditorRef.current = handle
       if (handle === null) {
         if (registeredHandle.current !== null) {

@@ -485,6 +485,8 @@ export function createNoteSession(options: NoteSessionOptions): NoteSession {
     content: () => header + buffer,
     liveContent: () => (status === 'ready' ? header + buffer : null),
     isDirty: () => dirty,
+    canCommitEditorChange: () =>
+      status === 'ready' && !isProtected && conflict === null && !disposed && !discarded && io.write !== null,
     updateFrontmatter,
     commitFrontmatter,
     commitTaskToggle,

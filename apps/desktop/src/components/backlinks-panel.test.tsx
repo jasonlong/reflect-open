@@ -18,6 +18,8 @@ const { getBacklinksWithContext, getBacklinksPage } = vi.hoisted(() => {
 })
 const resolveOrCreateNoteWithTitle = vi.hoisted(() => vi.fn())
 const openRouteInNewWindow = vi.hoisted(() => vi.fn<() => Promise<boolean>>())
+const revealBlock = vi.hoisted(() => vi.fn(() => true))
+const revealHeading = vi.hoisted(() => vi.fn(() => true))
 vi.mock('@reflect/core', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@reflect/core')>()),
   hasBridge: () => true,
@@ -26,6 +28,9 @@ vi.mock('@reflect/core', async (importOriginal) => ({
 }))
 vi.mock('@/providers/graph-provider', () => ({
   useGraph: () => ({ graph: { root: '/g', name: 'g', generation: 1 } }),
+}))
+vi.mock('@/editor/editor-handle-registry', () => ({
+  noteEditorHandleFor: () => ({ revealBlock, revealHeading }),
 }))
 vi.mock('@/lib/windows/open-in-new-window', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/windows/open-in-new-window')>()),
@@ -59,6 +64,8 @@ beforeEach(() => {
   getBacklinksPage.mockClear()
   resolveOrCreateNoteWithTitle.mockReset()
   openRouteInNewWindow.mockReset().mockResolvedValue(true)
+  revealBlock.mockClear()
+  revealHeading.mockClear()
 })
 
 describe('BacklinksPanel', () => {
@@ -115,6 +122,31 @@ describe('BacklinksPanel', () => {
 
     await chip.click()
     await expect.element(view.getByTestId('route')).toHaveTextContent('notes/roadmap.md')
+    await view.unmount()
+  })
+
+  it('reveals a human-labelled block target without pushing history', async () => {
+    getBacklinksWithContext.mockResolvedValue([
+      {
+        sourcePath: 'notes/meeting.md',
+        sourceTitle: 'Meeting Notes',
+        snippet: 'discussed [[Roadmap#^decision]]',
+        posFrom: 12,
+        tasks: [],
+        fragmentKind: 'block',
+        fragmentValue: 'decision',
+        wikiSyntax: 'reference',
+        blockAvailability: 'resolved',
+        targetBlockId: 'decision',
+        targetBlockOrdinal: 1,
+        targetBlockText: 'Keep Markdown',
+      },
+    ])
+    const view = await renderPanel('notes/roadmap.md')
+
+    await view.getByRole('button', { name: 'to: Keep Markdown' }).click()
+    expect(revealBlock).toHaveBeenCalledWith({ id: 'decision' })
+    await expect.element(view.getByTestId('route')).toHaveTextContent('"today"')
     await view.unmount()
   })
 

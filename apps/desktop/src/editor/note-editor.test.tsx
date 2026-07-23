@@ -68,6 +68,17 @@ describe('NoteEditor block identity adapter', () => {
     expect(handleRef.current?.getMarkdown()).toBe('- Addressable block ^alpha\n')
   })
 
+  it('reveals a heading through the provider-neutral handle', async () => {
+    const handleRef = createRef<NoteEditorHandle>()
+    await render(
+      <NoteEditor
+        initialContent={'# First\n\nBody\n\n## **Target Heading**\n\nTail'}
+        handleRef={handleRef}
+      />,
+    )
+    expect(handleRef.current?.revealHeading('#target%20heading')).toBe(true)
+  })
+
   it('assigns and reveals only a position-verified block', async () => {
     const handleRef = createRef<NoteEditorHandle>()
     await render(

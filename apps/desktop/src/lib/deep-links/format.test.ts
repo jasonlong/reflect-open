@@ -24,13 +24,21 @@ describe('deepLinkForRoute', () => {
     expect(parseDeepLink(url ?? '')).toEqual({
       kind: 'openNote',
       target: 'notes/project x.md',
+      fragment: null,
     })
   })
 
-  it('returns null for screens the grammar does not address', () => {
+  it('returns null for unaddressed screens and positional fragments', () => {
     expect(deepLinkForRoute({ kind: 'allNotes', tag: null })).toBeNull()
     expect(deepLinkForRoute({ kind: 'chat' })).toBeNull()
     expect(deepLinkForRoute({ kind: 'settings' })).toBeNull()
+    expect(
+      deepLinkForRoute({
+        kind: 'note',
+        path: 'notes/a.md',
+        fragment: { kind: 'blockPosition', ordinal: 1, expectedText: 'Target' },
+      }),
+    ).toBeNull()
   })
 })
 
@@ -38,7 +46,17 @@ describe('noteDeepLink', () => {
   it('percent-encodes the target and round-trips through the parser', () => {
     const url = noteDeepLink('Project X')
     expect(url).toBe('reflect://note/Project%20X')
-    expect(parseDeepLink(url)).toEqual({ kind: 'openNote', target: 'Project X' })
+    expect(parseDeepLink(url)).toEqual({ kind: 'openNote', target: 'Project X', fragment: null })
+  })
+
+  it('keeps an encoded hash in the note target separate from its fragment', () => {
+    const url = noteDeepLink('Project#Plan', { kind: 'block', id: 'alpha' })
+    expect(url).toBe('reflect://note/Project%23Plan#^alpha')
+    expect(parseDeepLink(url)).toEqual({
+      kind: 'openNote',
+      target: 'Project#Plan',
+      fragment: { kind: 'block', id: 'alpha' },
+    })
   })
 })
 
@@ -47,6 +65,19 @@ describe('dailyDeepLink', () => {
     expect(parseDeepLink(dailyDeepLink('2026-01-31'))).toEqual({
       kind: 'navigate',
       route: { kind: 'daily', date: '2026-01-31' },
+    })
+  })
+
+  it('round-trips an encoded heading fragment', () => {
+    expect(
+      parseDeepLink(dailyDeepLink('2026-01-31', { kind: 'heading', value: 'Plan & Review' })),
+    ).toEqual({
+      kind: 'navigate',
+      route: {
+        kind: 'daily',
+        date: '2026-01-31',
+        fragment: { kind: 'heading', value: 'Plan & Review' },
+      },
     })
   })
 })

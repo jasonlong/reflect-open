@@ -1,5 +1,5 @@
 import type { Route } from '@/routing/route'
-import { DEEP_LINK_SCHEME } from '@/lib/deep-links/deep-link'
+import { DEEP_LINK_SCHEME, type DurableNoteFragment } from '@/lib/deep-links/deep-link'
 
 /**
  * The write side of the deep-link codec: every URL this module emits parses
@@ -8,13 +8,13 @@ import { DEEP_LINK_SCHEME } from '@/lib/deep-links/deep-link'
  */
 
 /** `reflect://note/<target>` — `target` is a frontmatter id, title, or alias. */
-export function noteDeepLink(target: string): string {
-  return `${DEEP_LINK_SCHEME}://note/${encodeURIComponent(target)}`
+export function noteDeepLink(target: string, fragment?: DurableNoteFragment | null): string {
+  return `${DEEP_LINK_SCHEME}://note/${encodeURIComponent(target)}${formatFragment(fragment)}`
 }
 
 /** `reflect://daily/<date>` for an ISO `YYYY-MM-DD` date. */
-export function dailyDeepLink(date: string): string {
-  return `${DEEP_LINK_SCHEME}://daily/${date}`
+export function dailyDeepLink(date: string, fragment?: DurableNoteFragment | null): string {
+  return `${DEEP_LINK_SCHEME}://daily/${date}${formatFragment(fragment)}`
 }
 
 /**
@@ -30,15 +30,28 @@ export function deepLinkForRoute(route: Route): string | null {
     case 'tasks':
       return `${DEEP_LINK_SCHEME}://tasks`
     case 'daily':
-      return dailyDeepLink(route.date)
+      return route.fragment?.kind === 'blockPosition'
+        ? null
+        : dailyDeepLink(route.date, route.fragment)
     case 'search':
       return `${DEEP_LINK_SCHEME}://search?q=${encodeURIComponent(route.query)}`
     case 'note':
-      return noteDeepLink(route.path)
+      return route.fragment?.kind === 'blockPosition'
+        ? null
+        : noteDeepLink(route.path, route.fragment)
     case 'allNotes':
     case 'chat':
     case 'settings':
     case 'graphs':
       return null
   }
+}
+
+function formatFragment(fragment: DurableNoteFragment | null | undefined): string {
+  if (fragment == null) {
+    return ''
+  }
+  return fragment.kind === 'block'
+    ? `#^${encodeURIComponent(fragment.id)}`
+    : `#${encodeURIComponent(fragment.value)}`
 }

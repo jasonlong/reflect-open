@@ -6,6 +6,9 @@ import { useWikiLinkHoverPreview } from './use-wiki-link-hover-preview'
 
 const mocks = vi.hoisted(() => ({
   resolveExistingWikiTarget: vi.fn(),
+  resolveWikiAddress: vi.fn(),
+  getBlockById: vi.fn(),
+  getNote: vi.fn(),
   readExistingNoteSource: vi.fn(),
   markdownPreview: vi.fn(),
 }))
@@ -13,6 +16,9 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@reflect/core', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@reflect/core')>()),
   resolveExistingWikiTarget: mocks.resolveExistingWikiTarget,
+  resolveWikiAddress: mocks.resolveWikiAddress,
+  getBlockById: mocks.getBlockById,
+  getNote: mocks.getNote,
 }))
 
 vi.mock('@/lib/read-existing-note-source', () => ({
@@ -56,6 +62,9 @@ async function setupRenderer(
 describe('useWikiLinkHoverPreview', () => {
   beforeEach(() => {
     mocks.resolveExistingWikiTarget.mockReset()
+    mocks.resolveWikiAddress.mockReset()
+    mocks.getBlockById.mockReset()
+    mocks.getNote.mockReset()
     mocks.readExistingNoteSource.mockReset()
     mocks.markdownPreview.mockReset()
   })
@@ -111,6 +120,53 @@ describe('useWikiLinkHoverPreview', () => {
     })
     expect(mocks.resolveExistingWikiTarget).toHaveBeenCalledWith('Alpha', 7)
     expect(mocks.readExistingNoteSource).toHaveBeenCalledWith('notes/alpha.md', 7)
+  })
+
+  it('renders current block text and human context without exposing its ID', async () => {
+    mocks.resolveWikiAddress.mockResolvedValue({
+      kind: 'block',
+      path: 'notes/project.md',
+      blockId: 'secret-id',
+      ordinal: 1,
+      text: 'Keep Markdown',
+    })
+    mocks.getBlockById.mockResolvedValue({
+      kind: 'resolved',
+      block: {
+        notePath: 'notes/project.md',
+        ordinal: 1,
+        posFrom: 10,
+        posTo: 30,
+        blockId: 'secret-id',
+        text: 'Keep Markdown',
+        markdown: '- Keep Markdown',
+        breadcrumbs: ['Architecture'],
+      },
+    })
+    mocks.getNote.mockResolvedValue({ title: 'Project' })
+    const renderBody = await setupRenderer()
+
+    const screen = await render(<>{await renderBody(hoverHit('Project#^secret-id'))}</>)
+
+    await expect.element(screen.getByTestId('wiki-link-block-hover-preview')).toHaveTextContent(
+      'Project · Architecture',
+    )
+    await expect.element(screen.getByText('Keep Markdown')).toBeVisible()
+    expect(screen.container.textContent).not.toContain('secret-id')
+    expect(mocks.readExistingNoteSource).not.toHaveBeenCalled()
+  })
+
+  it('renders a compact unavailable state for missing and ambiguous blocks', async () => {
+    mocks.resolveWikiAddress.mockResolvedValueOnce({
+      kind: 'missing',
+      target: 'Project#^missing',
+      path: 'notes/project.md',
+      fragmentKind: 'block',
+      fragmentValue: 'missing',
+    })
+    const renderBody = await setupRenderer()
+    const screen = await render(<>{await renderBody(hoverHit('Project#^missing'))}</>)
+    await expect.element(screen.getByTestId('wiki-link-block-unavailable')).toBeVisible()
   })
 
   it('serves only local sniffable raster images to the preview', async () => {

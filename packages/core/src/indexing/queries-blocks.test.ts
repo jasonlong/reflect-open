@@ -41,6 +41,9 @@ describe('block projection and wiki-address resolution', () => {
       await expect(resolveWikiAddress('Components#^Alpha')).resolves.toEqual({
         kind: 'missing',
         target: 'Components#^Alpha',
+        path: 'notes/components.md',
+        fragmentKind: 'block',
+        fragmentValue: 'Alpha',
       })
       await expect(getBlockById('notes/architecture.md', 'dupe')).resolves.toEqual({
         kind: 'ambiguous',

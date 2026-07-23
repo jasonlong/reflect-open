@@ -59,7 +59,7 @@ export async function handleDeepLink(url: string, io: DeepLinkIo): Promise<void>
         startOperation('Opening link').fail(`Note not found: ${truncate(link.target)}`)
         return
       }
-      io.navigate(routeForPath(path))
+      io.navigate(routeForPath(path, link.fragment))
       return
     }
     case 'capture': {

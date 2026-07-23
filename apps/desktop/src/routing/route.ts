@@ -7,13 +7,22 @@
  * note route carries `path` — the reserved frontmatter `id` can join it later
  * without breaking the shape.
  */
-import { dailyPath, dateFromDailyPath, isDaily } from '@reflect/core'
+import { dailyPath, dateFromDailyPath, isBlockId, isDaily } from '@reflect/core'
 import { isIsoDate } from '@/lib/dates'
+
+export type NoteFragment =
+  | { readonly kind: 'heading'; readonly value: string }
+  | { readonly kind: 'block'; readonly id: string }
+  | {
+      readonly kind: 'blockPosition'
+      readonly ordinal: number
+      readonly expectedText: string
+    }
 
 export type Route =
   | { kind: 'today' }
-  | { kind: 'daily'; date: string }
-  | { kind: 'note'; path: string }
+  | { kind: 'daily'; date: string; fragment?: NoteFragment | null }
+  | { kind: 'note'; path: string; fragment?: NoteFragment | null }
   | { kind: 'allNotes'; tag: string | null }
   | { kind: 'search'; query: string }
   | { kind: 'tasks' }
@@ -38,10 +47,14 @@ export function routesEqual(a: Route, b: Route): boolean {
     case 'settings':
     case 'graphs':
       return true
-    case 'daily':
-      return a.date === (b as Extract<Route, { kind: 'daily' }>).date
-    case 'note':
-      return a.path === (b as Extract<Route, { kind: 'note' }>).path
+    case 'daily': {
+      const other = b as Extract<Route, { kind: 'daily' }>
+      return a.date === other.date && fragmentsEqual(a.fragment, other.fragment)
+    }
+    case 'note': {
+      const other = b as Extract<Route, { kind: 'note' }>
+      return a.path === other.path && fragmentsEqual(a.fragment, other.fragment)
+    }
     case 'allNotes':
       return a.tag === (b as Extract<Route, { kind: 'allNotes' }>).tag
     case 'search':
@@ -55,9 +68,11 @@ export function routesEqual(a: Route, b: Route): boolean {
  * well-formed but impossible date (e.g. `2026-02-31`), which `dailyPath` would
  * reject — opens as a plain note so navigation can never crash the workspace.
  */
-export function routeForPath(path: string): NoteRoute {
+export function routeForPath(path: string, fragment?: NoteFragment | null): NoteRoute {
   const date = isDaily(path) ? dateFromDailyPath(path) : null
-  return date !== null && isIsoDate(date) ? { kind: 'daily', date } : { kind: 'note', path }
+  const route: NoteRoute =
+    date !== null && isIsoDate(date) ? { kind: 'daily', date } : { kind: 'note', path }
+  return fragment == null ? route : { ...route, fragment }
 }
 
 /**
@@ -116,5 +131,58 @@ export function notePathForRoute(route: Route, today: string): string | null {
  * {@link useRouter} can trust `route.date` without re-validating it.
  */
 export function normalizeRoute(route: Route): Route {
-  return route.kind === 'daily' && !isIsoDate(route.date) ? { kind: 'today' } : route
+  if (route.kind === 'daily' && !isIsoDate(route.date)) {
+    return { kind: 'today' }
+  }
+  if (route.kind !== 'daily' && route.kind !== 'note') {
+    return route
+  }
+  const fragment = normalizeNoteFragment(route.fragment)
+  if (fragment === null) {
+    const { fragment: _fragment, ...withoutFragment } = route
+    return withoutFragment
+  }
+  return { ...route, fragment }
+}
+
+function normalizeNoteFragment(fragment: NoteFragment | null | undefined): NoteFragment | null {
+  if (fragment == null) {
+    return null
+  }
+  switch (fragment.kind) {
+    case 'heading': {
+      const value = fragment.value.trim()
+      return value === '' ? null : { kind: 'heading', value }
+    }
+    case 'block':
+      return isBlockId(fragment.id) ? fragment : null
+    case 'blockPosition': {
+      const expectedText = fragment.expectedText.trim()
+      return Number.isSafeInteger(fragment.ordinal) && fragment.ordinal >= 0 && expectedText !== ''
+        ? { ...fragment, expectedText }
+        : null
+    }
+  }
+}
+
+function fragmentsEqual(
+  left: NoteFragment | null | undefined,
+  right: NoteFragment | null | undefined,
+): boolean {
+  if (left == null || right == null) {
+    return left == null && right == null
+  }
+  if (left.kind !== right.kind) {
+    return false
+  }
+  switch (left.kind) {
+    case 'heading':
+      return left.value === (right as Extract<NoteFragment, { kind: 'heading' }>).value
+    case 'block':
+      return left.id === (right as Extract<NoteFragment, { kind: 'block' }>).id
+    case 'blockPosition': {
+      const other = right as Extract<NoteFragment, { kind: 'blockPosition' }>
+      return left.ordinal === other.ordinal && left.expectedText === other.expectedText
+    }
+  }
 }

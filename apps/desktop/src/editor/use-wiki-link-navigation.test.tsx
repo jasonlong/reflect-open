@@ -5,6 +5,7 @@ import { RouterProvider, useRouter } from '@/routing/router'
 import { useWikiLinkNavigation } from './use-wiki-link-navigation'
 
 const resolveWikiTarget = vi.hoisted(() => vi.fn())
+const resolveWikiAddress = vi.hoisted(() => vi.fn())
 const resolveExistingWikiTarget = vi.hoisted(() => vi.fn())
 const resolveOrCreateNoteWithTitle = vi.hoisted(() => vi.fn())
 const openRouteInNewWindow = vi.hoisted(() => vi.fn<() => Promise<boolean>>())
@@ -13,6 +14,7 @@ const startOperation = vi.hoisted(() => vi.fn(() => ({ fail: operationFail })))
 vi.mock('@reflect/core', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@reflect/core')>()),
   resolveWikiTarget,
+  resolveWikiAddress,
   resolveExistingWikiTarget,
   resolveOrCreateNoteWithTitle,
 }))
@@ -55,6 +57,7 @@ function currentRoute(view: Awaited<ReturnType<typeof renderHost>>): string {
 
 beforeEach(() => {
   resolveWikiTarget.mockReset()
+  resolveWikiAddress.mockReset()
   resolveExistingWikiTarget.mockReset()
   resolveOrCreateNoteWithTitle.mockReset()
   openRouteInNewWindow.mockReset()
@@ -76,6 +79,76 @@ describe('useWikiLinkNavigation', () => {
     await vi.waitFor(() => expect(currentRoute(view)).toContain('notes/target.md'))
     expect(resolveOrCreateNoteWithTitle).toHaveBeenCalledWith('Target', 1)
     expect(resolveWikiTarget).not.toHaveBeenCalled()
+    await view.unmount()
+  })
+
+  it('opens heading and block fragments through exact-first address resolution', async () => {
+    resolveWikiAddress
+      .mockResolvedValueOnce({
+        kind: 'heading',
+        path: 'notes/project.md',
+        heading: 'Plan',
+      })
+      .mockResolvedValueOnce({
+        kind: 'block',
+        path: 'notes/project.md',
+        blockId: 'decision',
+        ordinal: 2,
+        text: 'Keep Markdown',
+      })
+    const view = await renderHost()
+
+    lastHandler?.('Project#Plan')
+    await vi.waitFor(() => expect(currentRoute(view)).toContain('"heading"'))
+    expect(currentRoute(view)).toContain('"Plan"')
+
+    lastHandler?.('Project#^decision')
+    await vi.waitFor(() => expect(currentRoute(view)).toContain('"block"'))
+    expect(currentRoute(view)).toContain('"decision"')
+    expect(resolveOrCreateNoteWithTitle).not.toHaveBeenCalled()
+    await view.unmount()
+  })
+
+  it('does not create notes for missing or ambiguous block fragments', async () => {
+    resolveWikiAddress
+      .mockResolvedValueOnce({
+        kind: 'missing',
+        target: 'Project#^missing',
+        path: 'notes/project.md',
+        fragmentKind: 'block',
+        fragmentValue: 'missing',
+      })
+      .mockResolvedValueOnce({
+        kind: 'ambiguousBlock',
+        path: 'notes/project.md',
+        blockId: 'dupe',
+        count: 2,
+      })
+    const view = await renderHost()
+
+    lastHandler?.('Project#^missing')
+    await vi.waitFor(() => {
+      expect(operationFail).toHaveBeenCalledWith('That block is no longer available.')
+    })
+    lastHandler?.('Project#^dupe')
+    await vi.waitFor(() => expect(operationFail).toHaveBeenCalledTimes(2))
+    expect(resolveOrCreateNoteWithTitle).not.toHaveBeenCalled()
+    expect(currentRoute(view)).toContain('"today"')
+    await view.unmount()
+  })
+
+  it('keeps a literal hash title exact and ambiguity-checked', async () => {
+    resolveWikiAddress.mockResolvedValue({ kind: 'note', path: 'notes/literal.md' })
+    resolveOrCreateNoteWithTitle.mockResolvedValue({
+      kind: 'resolved',
+      path: 'notes/literal.md',
+    })
+    const view = await renderHost()
+
+    lastHandler?.('Project#Plan')
+
+    await vi.waitFor(() => expect(currentRoute(view)).toContain('notes/literal.md'))
+    expect(resolveOrCreateNoteWithTitle).toHaveBeenCalledWith('Project#Plan', 1)
     await view.unmount()
   })
 
@@ -221,6 +294,26 @@ describe('useWikiLinkNavigation', () => {
       expect(openRouteInNewWindow).toHaveBeenCalledWith({ kind: 'note', path: 'notes/target.md' }),
     )
     expect(currentRoute(view)).toContain('"today"') // this window stays put
+    await view.unmount()
+  })
+
+  it('⌘-click carries a durable block fragment into the new window', async () => {
+    resolveWikiAddress.mockResolvedValue({
+      kind: 'block',
+      path: 'notes/target.md',
+      blockId: 'decision',
+      ordinal: 0,
+      text: 'Decision',
+    })
+    const view = await renderHost()
+    lastHandler?.('Target#^decision', new MouseEvent('click', { metaKey: true }))
+    await vi.waitFor(() =>
+      expect(openRouteInNewWindow).toHaveBeenCalledWith({
+        kind: 'note',
+        path: 'notes/target.md',
+        fragment: { kind: 'block', id: 'decision' },
+      }),
+    )
     await view.unmount()
   })
 

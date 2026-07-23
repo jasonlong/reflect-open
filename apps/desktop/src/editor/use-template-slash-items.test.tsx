@@ -42,6 +42,7 @@ function fakeEditor(): NoteEditorHandle & { inserted: string[] } {
     getActiveBlock: () => null,
     setActiveBlockId: () => false,
     setBlockId: () => false,
+    revealHeading: () => false,
     revealBlock: () => false,
     refreshMarkdownRendering: () => {},
   }

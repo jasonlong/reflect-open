@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { effectiveDailyDate, notePathForRoute, routeForPath, routesEqual } from './route'
+import {
+  effectiveDailyDate,
+  normalizeRoute,
+  notePathForRoute,
+  routeForPath,
+  routesEqual,
+} from './route'
 
 describe('routeForPath', () => {
   it('routes real daily paths to the daily view', () => {
@@ -31,9 +37,62 @@ describe('routesEqual', () => {
     expect(routesEqual({ kind: 'allNotes', tag: null }, { kind: 'today' })).toBe(false)
   })
 
+  it('compares durable and positional note fragments structurally', () => {
+    const note = { kind: 'note' as const, path: 'notes/a.md' }
+    expect(routesEqual(note, { ...note, fragment: null })).toBe(true)
+    expect(
+      routesEqual(
+        { ...note, fragment: { kind: 'block', id: 'alpha' } },
+        { ...note, fragment: { kind: 'block', id: 'alpha' } },
+      ),
+    ).toBe(true)
+    expect(
+      routesEqual(
+        { ...note, fragment: { kind: 'heading', value: 'Plan' } },
+        { ...note, fragment: { kind: 'block', id: 'Plan' } },
+      ),
+    ).toBe(false)
+    expect(
+      routesEqual(
+        { ...note, fragment: { kind: 'blockPosition', ordinal: 2, expectedText: 'Decision' } },
+        { ...note, fragment: { kind: 'blockPosition', ordinal: 3, expectedText: 'Decision' } },
+      ),
+    ).toBe(false)
+  })
+
   it('treats singleton screens as equal to themselves', () => {
     expect(routesEqual({ kind: 'chat' }, { kind: 'chat' })).toBe(true)
     expect(routesEqual({ kind: 'chat' }, { kind: 'settings' })).toBe(false)
+  })
+})
+
+describe('normalizeRoute', () => {
+  it('normalizes valid fragments and drops malformed ones', () => {
+    expect(
+      normalizeRoute({
+        kind: 'note',
+        path: 'notes/a.md',
+        fragment: { kind: 'heading', value: '  Plan  ' },
+      }),
+    ).toEqual({
+      kind: 'note',
+      path: 'notes/a.md',
+      fragment: { kind: 'heading', value: 'Plan' },
+    })
+    expect(
+      normalizeRoute({
+        kind: 'note',
+        path: 'notes/a.md',
+        fragment: { kind: 'block', id: 'invalid_id' },
+      }),
+    ).toEqual({ kind: 'note', path: 'notes/a.md' })
+    expect(
+      normalizeRoute({
+        kind: 'daily',
+        date: '2026-07-01',
+        fragment: { kind: 'blockPosition', ordinal: -1, expectedText: '' },
+      }),
+    ).toEqual({ kind: 'daily', date: '2026-07-01' })
   })
 })
 

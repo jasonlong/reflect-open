@@ -36,7 +36,13 @@ export type ResolvedWikiAddress =
       readonly ordinal: number
       readonly text: string
     }
-  | { readonly kind: 'missing'; readonly target: string }
+  | {
+      readonly kind: 'missing'
+      readonly target: string
+      readonly path?: string
+      readonly fragmentKind?: 'block'
+      readonly fragmentValue?: string
+    }
   | {
       readonly kind: 'ambiguousBlock'
       readonly path: string
@@ -146,5 +152,11 @@ export async function resolveWikiAddress(target: string): Promise<ResolvedWikiAd
       count: block.count,
     }
   }
-  return { kind: 'missing', target: candidates.exactTarget }
+  return {
+    kind: 'missing',
+    target: candidates.exactTarget,
+    path: base.notePath,
+    fragmentKind: 'block',
+    fragmentValue: blockId,
+  }
 }

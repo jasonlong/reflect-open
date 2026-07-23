@@ -1,9 +1,10 @@
-import type { TextCaptureKind } from '@reflect/core'
+import { isBlockId, type TextCaptureKind } from '@reflect/core'
 import { isIsoDate } from '@/lib/dates'
 import {
   DEEP_LINK_SCHEME,
   DEEP_LINK_TEXT_MAX_LENGTH,
   type DeepLink,
+  type DurableNoteFragment,
 } from '@/lib/deep-links/deep-link'
 
 /**
@@ -22,26 +23,36 @@ export function parseDeepLink(raw: string): DeepLink | null {
   // host on a non-special scheme, which the WHATWG parser does *not* fold, so
   // lower-case it here. The argument is the path remainder.
   const argument = decodedPathRemainder(url)
-  if (argument === null) {
+  const fragment = decodedFragment(url)
+  if (argument === null || fragment === undefined) {
     return null
   }
   switch (url.host.toLowerCase()) {
     case 'today':
-      return argument === '' ? { kind: 'navigate', route: { kind: 'today' } } : null
+      return argument === '' && fragment === null
+        ? { kind: 'navigate', route: { kind: 'today' } }
+        : null
     case 'tasks':
-      return argument === '' ? { kind: 'navigate', route: { kind: 'tasks' } } : null
+      return argument === '' && fragment === null
+        ? { kind: 'navigate', route: { kind: 'tasks' } }
+        : null
     case 'daily':
       return isIsoDate(argument)
-        ? { kind: 'navigate', route: { kind: 'daily', date: argument } }
+        ? {
+            kind: 'navigate',
+            route: fragment === null
+              ? { kind: 'daily', date: argument }
+              : { kind: 'daily', date: argument, fragment },
+          }
         : null
     case 'search': {
       const query = url.searchParams.get('q')
-      return query !== null && argument === ''
+      return query !== null && argument === '' && fragment === null
         ? { kind: 'navigate', route: { kind: 'search', query } }
         : null
     }
     case 'note':
-      return argument === '' ? null : { kind: 'openNote', target: argument }
+      return argument === '' ? null : { kind: 'openNote', target: argument, fragment }
     case 'append':
       return captureLink('append', url, argument)
     case 'task':
@@ -87,6 +98,24 @@ function decodedPathRemainder(url: URL): string | null {
   }
 }
 
+/** Decode a durable heading/block fragment; `undefined` means malformed. */
+function decodedFragment(url: URL): DurableNoteFragment | null | undefined {
+  if (url.hash === '') {
+    return null
+  }
+  let value: string
+  try {
+    value = decodeURIComponent(url.hash.slice(1))
+  } catch {
+    return undefined
+  }
+  if (value.startsWith('^')) {
+    const id = value.slice(1)
+    return isBlockId(id) ? { kind: 'block', id } : undefined
+  }
+  return value.trim() === '' ? undefined : { kind: 'heading', value }
+}
+
 /**
  * A write link's payload: the `text` query parameter, whitespace-collapsed to
  * a single line. Newlines are folded rather than honored — a capture becomes
@@ -94,7 +123,7 @@ function decodedPathRemainder(url: URL): string | null {
  * blocks (headings, frontmatter fences) into the graph.
  */
 function captureLink(capture: TextCaptureKind, url: URL, argument: string): DeepLink | null {
-  if (argument !== '') {
+  if (argument !== '' || url.hash !== '') {
     return null
   }
   const text = url.searchParams.get('text')?.replace(/\s+/g, ' ').trim() ?? ''

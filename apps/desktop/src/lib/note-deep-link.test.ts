@@ -35,6 +35,17 @@ describe('deepLinkForNote', () => {
     expect(writeNote).not.toHaveBeenCalled()
   })
 
+  it('carries a durable block fragment on daily and stable-id links', async () => {
+    await expect(
+      deepLinkForNote('daily/2026-07-01.md', 3, { kind: 'block', id: 'decision' }),
+    ).resolves.toBe('reflect://daily/2026-07-01#^decision')
+
+    readNote.mockResolvedValue('---\nid: stable-id\n---\n# A\n')
+    await expect(
+      deepLinkForNote('notes/a.md', 3, { kind: 'block', id: 'decision' }),
+    ).resolves.toBe('reflect://note/stable-id#^decision')
+  })
+
   it('addresses an impossible-date daily file like a plain note (mints an id)', async () => {
     // `routeForPath` opens daily/2026-02-31.md as a plain note; a date-form
     // link would be one the parser rejects.

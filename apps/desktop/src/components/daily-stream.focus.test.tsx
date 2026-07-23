@@ -72,6 +72,7 @@ vi.mock('@/components/note-pane', () => ({
         getActiveBlock: () => null,
         setActiveBlockId: () => false,
         setBlockId: () => false,
+        revealHeading: () => false,
         revealBlock: () => false,
         refreshMarkdownRendering: () => {},
       })

@@ -8,6 +8,10 @@ import {
   untitledNotePath,
 } from '@reflect/core'
 import { attachFilesToNote } from '@/lib/attach-files'
+import {
+  runCopyBlockDeepLink,
+  runCopyBlockReference,
+} from '@/lib/note-block-reference'
 import { runCopyDeepLink } from '@/lib/note-deep-link'
 import { runGistPublish } from '@/lib/note-gist'
 import { toggleNotePinned } from '@/lib/note-pin'
@@ -247,6 +251,18 @@ const APP_COMMANDS: AppCommand[] = [
       }
       await runCopyDeepLink(path, generation)
     },
+  },
+  {
+    id: 'note.copyBlockReference',
+    title: 'Copy block reference',
+    keywords: ['block', 'reference', 'wiki link', 'clipboard'],
+    run: runCopyBlockReference,
+  },
+  {
+    id: 'note.copyBlockDeepLink',
+    title: 'Copy block deep link',
+    keywords: ['block', 'url', 'share', 'clipboard', 'reflect://'],
+    run: runCopyBlockDeepLink,
   },
   {
     id: 'note.random',

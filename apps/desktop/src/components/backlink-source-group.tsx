@@ -2,7 +2,7 @@ import { useState, type ReactElement } from 'react'
 import { ChevronRight } from 'lucide-react'
 import type { WikilinkClickHandler } from '@meowdown/core'
 import { BacklinkSnippet } from '@/components/backlink-snippet'
-import type { BacklinkSource } from '@/lib/group-backlinks'
+import type { BacklinkSnippetData, BacklinkSource } from '@/lib/group-backlinks'
 import type { NewWindowClickEvent } from '@/lib/windows/open-in-new-window'
 
 interface BacklinkSourceGroupProps {
@@ -23,6 +23,20 @@ interface BacklinkSourceGroupProps {
   onWikilinkClick: WikilinkClickHandler
   /** Resolve `![…](…)` sources inside a snippet to displayable URLs. */
   resolveImageUrl: (src: string) => string | undefined
+  /** Reveal a heading/block target in the note owning this backlinks panel. */
+  onRevealTarget: (snippet: BacklinkSnippetData) => void
+}
+
+function targetLabel(snippet: BacklinkSnippetData): string {
+  if (snippet.fragmentKind === 'heading') {
+    return `to: ${snippet.fragmentValue ?? 'heading'}`
+  }
+  if (snippet.fragmentKind === 'block') {
+    return snippet.blockAvailability === 'resolved' && snippet.targetBlockText !== null
+      ? `to: ${snippet.targetBlockText}`
+      : 'block unavailable'
+  }
+  return ''
 }
 
 /**
@@ -42,6 +56,7 @@ export function BacklinkSourceGroup({
   onOpen,
   onWikilinkClick,
   resolveImageUrl,
+  onRevealTarget,
 }: BacklinkSourceGroupProps): ReactElement {
   const [expanded, setExpanded] = useState(expandedOverride)
 
@@ -91,14 +106,24 @@ export function BacklinkSourceGroup({
       {expanded ? (
         <div className="mt-1 space-y-1">
           {source.snippets.map((snippet) => (
-            <BacklinkSnippet
-              key={snippet.key}
-              text={snippet.text}
-              notePath={source.path}
-              tasks={snippet.tasks}
-              onWikilinkClick={onWikilinkClick}
-              resolveImageUrl={resolveImageUrl}
-            />
+            <div key={snippet.key}>
+              {snippet.fragmentKind === null ? null : (
+                <button
+                  type="button"
+                  onClick={() => onRevealTarget(snippet)}
+                  className="mb-0.5 max-w-full truncate text-left text-[11px] text-text-muted hover:text-text"
+                >
+                  {targetLabel(snippet)}
+                </button>
+              )}
+              <BacklinkSnippet
+                text={snippet.text}
+                notePath={source.path}
+                tasks={snippet.tasks}
+                onWikilinkClick={onWikilinkClick}
+                resolveImageUrl={resolveImageUrl}
+              />
+            </div>
           ))}
         </div>
       ) : null}

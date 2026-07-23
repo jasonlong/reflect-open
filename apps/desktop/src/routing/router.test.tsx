@@ -36,6 +36,28 @@ describe('router', () => {
     expect(result.current.canForward).toBe(false)
   })
 
+  it('pushes same-note fragment arrivals and restores them through history', async () => {
+    const { result, act } = await routerHook()
+    await act(() => result.current.navigate({ kind: 'note', path: 'notes/a.md' }))
+    await act(() =>
+      result.current.navigate({
+        kind: 'note',
+        path: 'notes/a.md',
+        fragment: { kind: 'block', id: 'alpha' },
+      }),
+    )
+    expect(result.current.route).toMatchObject({
+      fragment: { kind: 'block', id: 'alpha' },
+    })
+
+    await act(() => result.current.back())
+    expect(result.current.route).toEqual({ kind: 'note', path: 'notes/a.md' })
+    await act(() => result.current.forward())
+    expect(result.current.route).toMatchObject({
+      fragment: { kind: 'block', id: 'alpha' },
+    })
+  })
+
   it('navigating from a back position truncates the forward branch', async () => {
     const { result, act } = await routerHook()
     await act(() => result.current.navigate({ kind: 'daily', date: '2026-06-08' }))
@@ -308,7 +330,13 @@ describe('router', () => {
   describe('note moves (Plan 17)', () => {
     it('rewrites the current route and history entries when a note moves', async () => {
       const { result, act } = await routerHook()
-      await act(() => result.current.navigate({ kind: 'note', path: 'notes/01abc.md' }))
+      await act(() =>
+        result.current.navigate({
+          kind: 'note',
+          path: 'notes/01abc.md',
+          fragment: { kind: 'heading', value: 'Plan' },
+        }),
+      )
       await act(() => result.current.navigate({ kind: 'allNotes', tag: null }))
       await act(() => result.current.navigate({ kind: 'note', path: 'notes/01abc.md' }))
       const arrivalsBefore = result.current.arrivalSeq
@@ -319,7 +347,10 @@ describe('router', () => {
 
       // The current entry followed the file — a rewrite, not an arrival, on
       // the same entry (views keep their scroll; nothing re-anchors).
-      expect(result.current.route).toEqual({ kind: 'note', path: 'notes/meeting-notes.md' })
+      expect(result.current.route).toEqual({
+        kind: 'note',
+        path: 'notes/meeting-notes.md',
+      })
       expect(result.current.arrivalSeq).toBe(arrivalsBefore)
       expect(result.current.entryId).toBe(entryBefore)
       expect(result.current.navigationRevision()).toBe(revisionBefore + 1)
@@ -329,7 +360,11 @@ describe('router', () => {
       await act(() => result.current.back())
       expect(result.current.route).toEqual({ kind: 'allNotes', tag: null })
       await act(() => result.current.back())
-      expect(result.current.route).toEqual({ kind: 'note', path: 'notes/meeting-notes.md' })
+      expect(result.current.route).toEqual({
+        kind: 'note',
+        path: 'notes/meeting-notes.md',
+        fragment: { kind: 'heading', value: 'Plan' },
+      })
     })
 
     it('leaves unrelated routes untouched', async () => {

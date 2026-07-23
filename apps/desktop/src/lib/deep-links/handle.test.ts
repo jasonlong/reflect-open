@@ -54,6 +54,18 @@ describe('handleDeepLink', () => {
     expect(navigate).toHaveBeenCalledWith({ kind: 'note', path: 'notes/project-x.md' })
   })
 
+  it('retains a durable fragment after resolving the note target', async () => {
+    resolveMock.mockResolvedValue('notes/project-x.md')
+
+    await handle('reflect://note/Project%20X#^decision')
+
+    expect(navigate).toHaveBeenCalledWith({
+      kind: 'note',
+      path: 'notes/project-x.md',
+      fragment: { kind: 'block', id: 'decision' },
+    })
+  })
+
   it('routes a daily-path resolution to the daily view', async () => {
     resolveMock.mockResolvedValue('daily/2026-07-01.md')
 

@@ -38,9 +38,11 @@ Reflect first resolves the complete authored wiki target as an existing note tit
 
 This means a real note titled `Project#Plan` continues to win over treating `Plan` as a heading in `Project`.
 
-Internal references use a readable note address and human alias. App-authored references snapshot sanitized block text into the alias so normal UI shows meaningful content rather than `Note#^id`. External `reflect://` links use a stable note ID/date plus the same fragment.
+Internal references use a readable note address and human alias. **Copy block reference** snapshots sanitized block text into the alias so normal UI shows meaningful content rather than `Note#^id`; delimiter-rich text is flattened and long labels are truncated by Unicode code point. **Copy block deep link** uses a stable note ID/date plus the same fragment. Both actions mint an ID only for the explicitly selected list item and wait for the owning editor session to persist it before touching the clipboard.
 
 ## Presentation
+
+Following a reference carries the fragment through route history, secondary windows, and deep links, then reveals it once the destination editor is ready. Missing blocks stay on the source note with non-blocking “block unavailable” feedback; duplicate IDs are reported as ambiguous and never first-match. Incoming backlinks retain these references and show a quiet human target label, while ordinary note backlinks remain unchanged.
 
 The suffix is storage syntax, not normal interface chrome. Meowdown removes it into editor node attributes and does not render it beside the bullet, including when the caret enters that block. References display their alias (or a note-name fallback); transclusions display native-looking source content. IDs remain visible in explicit raw-Markdown/source views and external text editors.
 

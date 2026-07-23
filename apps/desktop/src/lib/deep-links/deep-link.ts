@@ -1,5 +1,5 @@
 import { TEXT_CAPTURE_MAX_LENGTH, type TextCaptureKind } from '@reflect/core'
-import type { Route } from '@/routing/route'
+import type { NoteFragment, Route } from '@/routing/route'
 
 /**
  * The `reflect://` deep-link vocabulary (docs/deep-links.md). URLs are a codec
@@ -31,5 +31,8 @@ export const DEEP_LINK_TEXT_MAX_LENGTH = TEXT_CAPTURE_MAX_LENGTH
  */
 export type DeepLink =
   | { kind: 'navigate'; route: Route }
-  | { kind: 'openNote'; target: string }
+  | { kind: 'openNote'; target: string; fragment: DurableNoteFragment | null }
   | { kind: 'capture'; capture: TextCaptureKind; text: string }
+
+/** A fragment safe to persist outside the current process. */
+export type DurableNoteFragment = Exclude<NoteFragment, { kind: 'blockPosition' }>

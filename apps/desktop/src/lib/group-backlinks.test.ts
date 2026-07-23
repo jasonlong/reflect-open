@@ -37,14 +37,40 @@ describe('groupBacklinksBySource', () => {
         path: 'notes/a.md',
         title: 'A',
         snippets: [
-          { key: 'notes/a.md:4', text: 'first [[t]]', tasks: [] },
-          { key: 'notes/a.md:40', text: 'second [[t]]', tasks: [] },
+          {
+            key: 'notes/a.md:4::',
+            text: 'first [[t]]',
+            tasks: [],
+            fragmentKind: null,
+            fragmentValue: null,
+            blockAvailability: null,
+            targetBlockText: null,
+          },
+          {
+            key: 'notes/a.md:40::',
+            text: 'second [[t]]',
+            tasks: [],
+            fragmentKind: null,
+            fragmentValue: null,
+            blockAvailability: null,
+            targetBlockText: null,
+          },
         ],
       },
       {
         path: 'notes/b.md',
         title: 'B',
-        snippets: [{ key: 'notes/b.md:9', text: 'only [[t]]', tasks: [] }],
+        snippets: [
+          {
+            key: 'notes/b.md:9::',
+            text: 'only [[t]]',
+            tasks: [],
+            fragmentKind: null,
+            fragmentValue: null,
+            blockAvailability: null,
+            targetBlockText: null,
+          },
+        ],
       },
     ])
   })

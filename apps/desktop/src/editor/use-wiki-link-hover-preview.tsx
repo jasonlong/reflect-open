@@ -1,6 +1,15 @@
 import { useCallback, type ReactNode } from 'react'
 import type { WikilinkHoverHit } from '@meowdown/core'
-import { resolveExistingWikiTarget, splitFrontmatter, type DateFormat } from '@reflect/core'
+import {
+  getBlockById,
+  getNote,
+  parseWikiAddressCandidates,
+  resolveExistingWikiTarget,
+  resolveWikiAddress,
+  splitFrontmatter,
+  type BlockProjection,
+  type DateFormat,
+} from '@reflect/core'
 import { WikiLinkHoverPreview } from '@/components/wiki-link-hover-preview'
 import { readExistingNoteSource } from '@/lib/read-existing-note-source'
 
@@ -14,6 +23,30 @@ interface WikiLinkHoverPreviewOptions {
 
 function isSvgAsset(path: string): boolean {
   return path.toLowerCase().endsWith('.svg')
+}
+
+function BlockHoverPreview({
+  block,
+  noteTitle,
+}: {
+  block: BlockProjection
+  noteTitle: string
+}): ReactNode {
+  const context = [...block.breadcrumbs, noteTitle].reverse().join(' · ')
+  return (
+    <div className="px-3.5 py-3 text-xs" data-testid="wiki-link-block-hover-preview">
+      <div className="mb-1 text-text-muted">{context}</div>
+      <div className="leading-relaxed text-popover-foreground">{block.text}</div>
+    </div>
+  )
+}
+
+function UnavailableBlockHoverPreview(): ReactNode {
+  return (
+    <div className="px-3.5 py-3 text-xs text-text-muted" data-testid="wiki-link-block-unavailable">
+      Block unavailable
+    </div>
+  )
 }
 
 function previewRasterUrl(url: string): string {
@@ -58,6 +91,42 @@ export function useWikiLinkHoverPreview({
         return null
       }
       try {
+        const candidates = parseWikiAddressCandidates(target)
+        if (candidates.fragmented !== null) {
+          const address = await resolveWikiAddress(target)
+          if (address.kind === 'block') {
+            const [lookup, note] = await Promise.all([
+              getBlockById(address.path, address.blockId),
+              getNote(address.path),
+            ])
+            return lookup.kind === 'resolved' ? (
+              <BlockHoverPreview
+                block={lookup.block}
+                noteTitle={note?.title ?? address.path}
+              />
+            ) : (
+              <UnavailableBlockHoverPreview />
+            )
+          }
+          if (
+            address.kind === 'ambiguousBlock' ||
+            (address.kind === 'missing' && address.fragmentKind === 'block')
+          ) {
+            return <UnavailableBlockHoverPreview />
+          }
+          if (address.kind === 'heading' || address.kind === 'note') {
+            const source = await readExistingNoteSource(address.path, generation)
+            return (
+              <WikiLinkHoverPreview
+                path={address.path}
+                markdown={splitFrontmatter(source).body}
+                dateFormat={dateFormat}
+                resolveImageUrl={resolvePreviewImageUrl}
+              />
+            )
+          }
+        }
+
         const resolution = await resolveExistingWikiTarget(target, generation)
         if (resolution.kind !== 'resolved') {
           return null
