@@ -3,8 +3,8 @@ import { gistBodyHash, parseNote } from '../markdown'
 import { buildIndexedNote, indexedNoteSchema, PROJECTION_VERSION } from './indexed-note'
 
 describe('buildIndexedNote', () => {
-  it('carries the projection version that backfills linkable rich-title aliases', () => {
-    expect(PROJECTION_VERSION).toBe(16)
+  it('carries the projection version that backfills blocks and link fragments', () => {
+    expect(PROJECTION_VERSION).toBe(17)
   })
 
   it('flattens a parsed note into the index payload', () => {
@@ -44,6 +44,32 @@ describe('buildIndexedNote', () => {
       true,
     )
     expect(indexed.assets).toEqual(['assets/p.png'])
+  })
+
+  it('projects blocks and exact-first wiki fragment metadata', () => {
+    const source = '# Project\n\n- Parent\n  - Addressable ^alpha\n\n![[Other#^beta]]'
+    const indexed = buildIndexedNote(parseNote({ path: 'notes/project.md', source }), {
+      fileHash: 'h',
+      mtime: 0,
+      source,
+    })
+
+    expect(indexed.blocks).toMatchObject([
+      { ordinal: 0, blockId: null, text: 'Parent', breadcrumbs: [] },
+      { ordinal: 1, blockId: 'alpha', text: 'Addressable', breadcrumbs: ['Parent'] },
+    ])
+    expect(indexed.links).toContainEqual({
+      kind: 'wiki',
+      targetRaw: 'Other#^beta',
+      targetKey: 'other#^beta',
+      targetBaseKey: 'other',
+      fragmentKind: 'block',
+      fragmentValue: 'beta',
+      wikiSyntax: 'embed',
+      alias: null,
+      posFrom: source.indexOf('![[Other#^beta]]') + 1,
+      posTo: source.indexOf('![[Other#^beta]]') + '![[Other#^beta]]'.length,
+    })
   })
 
   it('derives v1 subject aliases from a `//` title, after frontmatter aliases', () => {

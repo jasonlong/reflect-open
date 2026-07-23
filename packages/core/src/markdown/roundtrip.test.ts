@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { renameWikiLink } from './edit'
+import { renameWikiLink } from './wiki-link-rename'
 import { parseNote } from './extract'
 
 /**

@@ -480,7 +480,20 @@ describe('Kysely → db_query bridge', () => {
   it('getBacklinks maps snake_case rows back to camelCase', async () => {
     const backlinks = await getBacklinks('notes/a.md')
     expect(backlinks).toEqual([
-      { sourcePath: 'notes/b.md', targetRaw: 'A', alias: null, posFrom: 0, posTo: 3 },
+      {
+        sourcePath: 'notes/b.md',
+        targetRaw: 'A',
+        alias: null,
+        posFrom: 0,
+        posTo: 3,
+        wikiSyntax: null,
+        fragmentKind: null,
+        fragmentValue: null,
+        blockAvailability: null,
+        targetBlockId: null,
+        targetBlockOrdinal: null,
+        targetBlockText: null,
+      },
     ])
   })
 

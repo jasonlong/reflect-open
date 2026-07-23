@@ -224,7 +224,19 @@ describe('getBacklinksWithContext', () => {
     title: string
     recencyMs: number
     content: string
-    positions: number[]
+    positions: Array<
+      | number
+      | {
+          posFrom: number
+          fragmentKind: 'heading' | 'block' | null
+          fragmentValue: string | null
+          wikiSyntax: 'reference' | 'embed'
+          blockClaimCount: number | null
+          targetBlockId: string | null
+          targetBlockOrdinal: number | null
+          targetBlockText: string | null
+        }
+    >
   }
 
   function mockBacklinkPage({
@@ -259,9 +271,20 @@ describe('getBacklinksWithContext', () => {
       }
       if (query.includes('"backlinks"."pos_from"')) {
         return sources.flatMap((source) =>
-          source.positions.map((posFrom) => ({
+          source.positions.map((position) => ({
             source_path: source.path,
-            pos_from: posFrom,
+            pos_from: typeof position === 'number' ? position : position.posFrom,
+            ...(typeof position === 'number'
+              ? {}
+              : {
+                  fragment_kind: position.fragmentKind,
+                  fragment_value: position.fragmentValue,
+                  wiki_syntax: position.wikiSyntax,
+                  block_claim_count: position.blockClaimCount,
+                  target_block_id: position.targetBlockId,
+                  target_block_ordinal: position.targetBlockOrdinal,
+                  target_block_text: position.targetBlockText,
+                }),
           })),
         )
       }
@@ -434,6 +457,60 @@ describe('getBacklinksWithContext', () => {
     expect(page.contexts.map((row) => row.snippet)).toEqual([
       '- parent line\n  - one [[Project X]]\n  - two [[projx]]',
     ])
+  })
+
+  it('keeps two target block fragments in the same snippet logically distinct', async () => {
+    const content = 'See [[target#^one]] and [[target#^two]] together.\n'
+    const occurrence = (
+      blockId: string,
+      text: string,
+    ): Exclude<MockBacklinkSource['positions'][number], number> => ({
+      posFrom: content.indexOf(`[[target#^${blockId}]]`),
+      fragmentKind: 'block',
+      fragmentValue: blockId,
+      wikiSyntax: 'reference',
+      blockClaimCount: 1,
+      targetBlockId: blockId,
+      targetBlockOrdinal: blockId === 'one' ? 1 : 2,
+      targetBlockText: text,
+    })
+    mockBacklinkPage({
+      indexedLinkCount: 2,
+      sources: [
+        {
+          path: 'notes/source.md',
+          title: 'Source',
+          recencyMs: 1_000,
+          content,
+          positions: [occurrence('one', 'First'), occurrence('two', 'Second')],
+        },
+      ],
+    })
+
+    const page = await getBacklinksWithContext('notes/target.md', {
+      cursor: null,
+      limit: 1,
+    })
+
+    expect(page.contexts).toMatchObject([
+      {
+        fragmentKind: 'block',
+        fragmentValue: 'one',
+        blockAvailability: 'resolved',
+        targetBlockId: 'one',
+        targetBlockOrdinal: 1,
+        targetBlockText: 'First',
+      },
+      {
+        fragmentKind: 'block',
+        fragmentValue: 'two',
+        blockAvailability: 'resolved',
+        targetBlockId: 'two',
+        targetBlockOrdinal: 2,
+        targetBlockText: 'Second',
+      },
+    ])
+    expect(page.contexts[0]?.snippet).toBe(page.contexts[1]?.snippet)
   })
 
   it('deduplicates a complete source while reporting the raw indexed link count', async () => {

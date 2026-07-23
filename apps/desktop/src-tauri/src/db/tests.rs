@@ -12,8 +12,8 @@ use super::migrations::{migrate, migrate_to, open_in_memory, open_index_at, vali
 use super::query::run_query;
 use super::scan::scan_reconcile;
 use super::write::{
-    apply_note, clear_index, move_note, touch_note, IndexedAlias, IndexedEmail, IndexedLink,
-    IndexedNote, IndexedTag, IndexedTask,
+    apply_note, clear_index, move_note, remove_note, touch_note, IndexedAlias, IndexedBlock,
+    IndexedEmail, IndexedLink, IndexedNote, IndexedTag, IndexedTask,
 };
 
 fn migrated() -> Connection {
@@ -45,6 +45,7 @@ fn note(path: &str, title: &str, links: Vec<IndexedLink>) -> IndexedNote {
         asset_text: String::new(),
         preview: "body".to_string(),
         links,
+        blocks: vec![],
         tags: vec![],
         aliases: vec![],
         emails: vec![],
@@ -58,9 +59,28 @@ fn wiki(target: &str) -> IndexedLink {
         kind: "wiki".to_string(),
         target_raw: target.to_string(),
         target_key: target.to_lowercase(),
+        target_base_key: None,
+        fragment_kind: None,
+        fragment_value: None,
+        wiki_syntax: Some("reference".to_string()),
         alias: None,
         pos_from: 0,
         pos_to: 0,
+    }
+}
+
+fn block_wiki(note_title: &str, block_id: &str, syntax: &str, pos_from: i64) -> IndexedLink {
+    IndexedLink {
+        kind: "wiki".to_string(),
+        target_raw: format!("{note_title}#^{block_id}"),
+        target_key: format!("{}#^{block_id}", note_title.to_lowercase()),
+        target_base_key: Some(note_title.to_lowercase()),
+        fragment_kind: Some("block".to_string()),
+        fragment_value: Some(block_id.to_string()),
+        wiki_syntax: Some(syntax.to_string()),
+        alias: None,
+        pos_from,
+        pos_to: pos_from + 10,
     }
 }
 
@@ -78,6 +98,18 @@ fn daily_note(path: &str, date: &str) -> IndexedNote {
     indexed.kind = "daily".to_string();
     indexed.daily_date = Some(date.to_string());
     indexed
+}
+
+fn block(ordinal: i64, id: Option<&str>, text: &str) -> IndexedBlock {
+    IndexedBlock {
+        ordinal,
+        pos_from: ordinal * 10,
+        pos_to: ordinal * 10 + 9,
+        block_id: id.map(str::to_string),
+        text: text.to_string(),
+        markdown: format!("- {text}"),
+        breadcrumbs: vec!["Parent".to_string()],
+    }
 }
 
 fn task(marker_offset: i64, text: &str, checked: bool) -> IndexedTask {
@@ -308,18 +340,23 @@ fn backlink_resolution_uses_daily_then_title_then_alias_precedence() {
 }
 
 #[test]
-fn note_key_precedence_migration_preserves_existing_projection_rows() {
+fn block_fragment_migration_preserves_existing_projection_rows() {
     let mut conn = open_in_memory().expect("open");
     conn.execute_batch("PRAGMA foreign_keys=ON;").unwrap();
-    migrate_to(&mut conn, 17).expect("stage v17");
+    migrate_to(&mut conn, 18).expect("stage v18");
 
-    apply_note(
-        &conn,
-        &aliased_note("notes/tim-maccaw-dad.md", "Tim MacCaw // Dad", "Dad"),
+    conn.execute_batch(
+        "INSERT INTO notes(path, title, title_key, kind, is_private, is_pinned, has_conflict, gist_stale, file_hash, mtime, updated_at, preview)
+         VALUES
+           ('notes/tim-maccaw-dad.md', 'Tim MacCaw // Dad', 'tim maccaw // dad', 'note', 0, 0, 0, 0, 'h', 0, 0, ''),
+           ('notes/dad.md', 'Dad', 'dad', 'note', 0, 0, 0, 0, 'h', 0, 0, ''),
+           ('notes/source.md', 'Source', 'source', 'note', 0, 0, 0, 0, 'h', 0, 0, '');
+         INSERT INTO aliases(note_path, alias, alias_key)
+         VALUES ('notes/tim-maccaw-dad.md', 'Dad', 'dad');
+         INSERT INTO links(source_path, kind, target_raw, target_key, alias, pos_from, pos_to)
+         VALUES ('notes/source.md', 'wiki', 'Dad', 'dad', NULL, 0, 7);",
     )
     .unwrap();
-    apply_note(&conn, &note("notes/dad.md", "Dad", vec![])).unwrap();
-    apply_note(&conn, &note("notes/source.md", "Source", vec![wiki("Dad")])).unwrap();
 
     let counts_before: Vec<i64> = ["notes", "links", "aliases"]
         .iter()
@@ -331,7 +368,7 @@ fn note_key_precedence_migration_preserves_existing_projection_rows() {
         })
         .collect();
 
-    migrate(&mut conn).expect("migrate to v18");
+    migrate(&mut conn).expect("migrate to v19");
 
     let counts_after: Vec<i64> = ["notes", "links", "aliases"]
         .iter()
@@ -746,6 +783,7 @@ fn clear_cascades_to_child_tables() {
     let conn = migrated();
     let mut seeded = note("notes/a.md", "A", vec![wiki("X")]);
     seeded.tasks = vec![task(0, "buy milk", false)];
+    seeded.blocks = vec![block(0, Some("alpha"), "Block")];
     apply_note(&conn, &seeded).unwrap();
     clear_index(&conn).unwrap();
     // Deleting notes cascades to children; search_fts is cleared explicitly.
@@ -753,6 +791,8 @@ fn clear_cascades_to_child_tables() {
         "notes",
         "note_text",
         "links",
+        "blocks",
+        "blocks_fts",
         "tags",
         "aliases",
         "assets",
@@ -773,6 +813,106 @@ fn reapplying_a_note_cascades_away_stale_children() {
     apply_note(&conn, &note("notes/a.md", "A", vec![])).unwrap();
     let rows = run_query(&conn, "SELECT count(*) AS n FROM links", &[]).unwrap();
     assert_eq!(rows[0]["n"], Value::from(0));
+}
+
+#[test]
+fn block_projection_apply_replace_move_and_remove_stays_in_sync() {
+    let mut conn = migrated();
+    let mut seeded = note("notes/a.md", "A", vec![]);
+    seeded.blocks = vec![
+        block(0, Some("alpha"), "First block"),
+        block(1, None, "Second block"),
+    ];
+    apply_note(&conn, &seeded).unwrap();
+
+    let rows = run_query(
+        &conn,
+        "SELECT block_id, text, breadcrumbs FROM blocks ORDER BY ordinal",
+        &[],
+    )
+    .unwrap();
+    assert_eq!(rows.len(), 2);
+    assert_eq!(rows[0]["block_id"], Value::from("alpha"));
+    assert_eq!(rows[0]["text"], Value::from("First block"));
+    assert_eq!(rows[0]["breadcrumbs"], Value::from("[\"Parent\"]"));
+    let fts = run_query(
+        &conn,
+        "SELECT text, context, note_title FROM blocks_fts WHERE blocks_fts MATCH 'First'",
+        &[],
+    )
+    .unwrap();
+    assert_eq!(fts.len(), 1);
+    assert_eq!(fts[0]["context"], Value::from("Parent"));
+    assert_eq!(fts[0]["note_title"], Value::from("A"));
+
+    move_in_txn(&mut conn, "notes/a.md", "notes/moved.md").unwrap();
+    let moved = run_query(
+        &conn,
+        "SELECT note_path FROM blocks UNION ALL SELECT note_path FROM blocks_fts ORDER BY note_path",
+        &[],
+    )
+    .unwrap();
+    assert!(moved
+        .iter()
+        .all(|row| row["note_path"] == Value::from("notes/moved.md")));
+
+    remove_note(&conn, "notes/moved.md").unwrap();
+    for table in ["blocks", "blocks_fts"] {
+        let count = run_query(&conn, &format!("SELECT count(*) AS n FROM {table}"), &[]).unwrap();
+        assert_eq!(count[0]["n"], Value::from(0));
+    }
+
+    let mut replaced = note("notes/a.md", "A", vec![]);
+    replaced.blocks = vec![block(0, Some("old"), "Old")];
+    apply_note(&conn, &replaced).unwrap();
+    apply_note(&conn, &note("notes/a.md", "A", vec![])).unwrap();
+    let count = run_query(&conn, "SELECT count(*) AS n FROM blocks_fts", &[]).unwrap();
+    assert_eq!(count[0]["n"], Value::from(0));
+}
+
+#[test]
+fn block_backlinks_and_embed_places_require_a_unique_target() {
+    let conn = migrated();
+    let mut target = note("notes/target.md", "Target", vec![]);
+    target.blocks = vec![block(0, Some("alpha"), "Addressed")];
+    apply_note(&conn, &target).unwrap();
+    apply_note(
+        &conn,
+        &note(
+            "notes/source.md",
+            "Source",
+            vec![
+                block_wiki("Target", "alpha", "reference", 10),
+                block_wiki("Target", "alpha", "embed", 30),
+            ],
+        ),
+    )
+    .unwrap();
+
+    let backlinks = run_query(
+        &conn,
+        "SELECT block_id, claim_count, wiki_syntax FROM block_backlinks ORDER BY pos_from",
+        &[],
+    )
+    .unwrap();
+    assert_eq!(backlinks.len(), 2);
+    assert_eq!(backlinks[0]["claim_count"], Value::from(1));
+    assert_eq!(backlinks[1]["wiki_syntax"], Value::from("embed"));
+    let places = run_query(
+        &conn,
+        "SELECT block_id, embed_ordinal FROM block_embed_places",
+        &[],
+    )
+    .unwrap();
+    assert_eq!(places.len(), 1);
+    assert_eq!(places[0]["embed_ordinal"], Value::from(0));
+
+    target.blocks.push(block(1, Some("alpha"), "Duplicate"));
+    apply_note(&conn, &target).unwrap();
+    let ambiguous = run_query(&conn, "SELECT count(*) AS n FROM block_backlinks", &[]).unwrap();
+    assert_eq!(ambiguous[0]["n"], Value::from(0));
+    let places = run_query(&conn, "SELECT count(*) AS n FROM block_embed_places", &[]).unwrap();
+    assert_eq!(places[0]["n"], Value::from(0));
 }
 
 #[test]

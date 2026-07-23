@@ -42,9 +42,24 @@ function sampleNote(overrides: Partial<IndexedNote> = {}): IndexedNote {
         kind: 'wiki',
         targetRaw: 'Other Note',
         targetKey: 'other note',
+        targetBaseKey: null,
+        fragmentKind: null,
+        fragmentValue: null,
+        wikiSyntax: 'reference',
         alias: null,
         posFrom: 3,
         posTo: 16,
+      },
+    ],
+    blocks: [
+      {
+        ordinal: 0,
+        posFrom: 20,
+        posTo: 42,
+        blockId: 'sample-block',
+        text: 'Sample block',
+        markdown: '- Sample block',
+        breadcrumbs: ['Project'],
       },
     ],
     tags: [{ tag: 'book', tagKey: 'book' }],
@@ -95,10 +110,10 @@ describe('createDevIndexDb', () => {
   it('applies the real migrations and answers db_query-style reads', async () => {
     const db = await openDb()
     const tables = db.query(
-      "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('notes', 'tags', 'tasks', 'search_fts') ORDER BY name",
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('notes', 'tags', 'tasks', 'blocks', 'blocks_fts', 'search_fts') ORDER BY name",
       [],
     )
-    expect(tables.map((row) => row['name'])).toEqual(['notes', 'search_fts', 'tags', 'tasks'])
+    expect(tables.map((row) => row['name'])).toEqual(['blocks', 'blocks_fts', 'notes', 'search_fts', 'tags', 'tasks'])
   })
 
   it('applies a note projection across notes, tags, tasks, and FTS', async () => {
@@ -113,6 +128,11 @@ describe('createDevIndexDb', () => {
 
     const tasks = db.query('SELECT text, breadcrumbs, checked FROM tasks', [])
     expect(tasks).toEqual([{ text: 'Do the thing', breadcrumbs: '["Project"]', checked: 0 }])
+
+    const blocks = db.query('SELECT block_id, text, breadcrumbs FROM blocks', [])
+    expect(blocks).toEqual([
+      { block_id: 'sample-block', text: 'Sample block', breadcrumbs: '["Project"]' },
+    ])
 
     const emails = db.query('SELECT email, email_key FROM note_emails', [])
     expect(emails).toEqual([

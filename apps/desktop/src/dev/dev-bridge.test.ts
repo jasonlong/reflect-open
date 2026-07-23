@@ -30,6 +30,7 @@ function projection(path: string, mtime: number, fileHash: string): IndexedNote 
     assetText: '',
     preview: 'body',
     links: [],
+    blocks: [],
     tags: [],
     aliases: [],
     emails: [],

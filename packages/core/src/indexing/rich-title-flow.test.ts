@@ -7,7 +7,12 @@ import {
   openMigratedIndex,
   project,
 } from './flow-test-harness'
-import { getLinkSources, resolveWikiTarget, suggestWikiLinkTargets, suggestWikiTargets } from './queries'
+import {
+  getRenameLinkSources,
+  resolveWikiTarget,
+  suggestWikiLinkTargets,
+  suggestWikiTargets,
+} from './queries'
 import { rewriteLinksForTitleChange } from './rename'
 
 /**
@@ -102,7 +107,7 @@ describe('rich title flow', () => {
         from: 'Old Meeting',
         to: 'Meeting with [[Ada Lovelace|Ada]]',
         io: {
-          sources: getLinkSources,
+          sources: getRenameLinkSources,
           read: async () => 'See [[Old Meeting]].\n',
           write: async (path) => {
             writes.push(path)

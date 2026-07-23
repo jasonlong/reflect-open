@@ -1,23 +1,83 @@
-import type { Database } from '@reflect/db'
-import { sql, type Selectable } from 'kysely'
+import { sql } from 'kysely'
 import { readNote } from '../graph/commands'
 import { blockContextLinesAt, prepareBlockContext, type BlockContextSource } from './block-context'
 import { db } from './db'
 import { extractSnippetTasks, type SnippetTask } from './snippet-tasks'
 
-export type Backlink = Pick<
-  Selectable<Database['backlinks']>,
-  'sourcePath' | 'targetRaw' | 'alias' | 'posFrom' | 'posTo'
->
+/** Whether one block-fragment backlink has a unique current target. */
+export type BlockAvailability = 'resolved' | 'missing' | 'ambiguous'
+
+/** One resolved incoming wiki occurrence, including optional fragment state. */
+export interface Backlink {
+  readonly sourcePath: string | null
+  readonly targetRaw: string | null
+  readonly alias: string | null
+  readonly posFrom: number | null
+  readonly posTo: number | null
+  readonly wikiSyntax: string | null
+  readonly fragmentKind: string | null
+  readonly fragmentValue: string | null
+  readonly blockAvailability: BlockAvailability | null
+  readonly targetBlockId: string | null
+  readonly targetBlockOrdinal: number | null
+  readonly targetBlockText: string | null
+}
 
 /** Notes that link to `path` (resolved at query time via the `backlinks` view). */
-export function getBacklinks(path: string): Promise<Backlink[]> {
-  return db
+export async function getBacklinks(path: string): Promise<Backlink[]> {
+  const rows = await db
     .selectFrom('backlinks')
+    .leftJoin('blockKeys', (join) =>
+      join
+        .onRef('blockKeys.notePath', '=', 'backlinks.targetPath')
+        .onRef('blockKeys.blockId', '=', 'backlinks.fragmentValue'),
+    )
+    .leftJoin('blocks', (join) =>
+      join
+        .onRef('blocks.notePath', '=', 'backlinks.targetPath')
+        .onRef('blocks.ordinal', '=', 'blockKeys.ordinal'),
+    )
     .where('targetPath', '=', path)
-    .select(['sourcePath', 'targetRaw', 'alias', 'posFrom', 'posTo'])
+    .select([
+      'sourcePath',
+      'targetRaw',
+      'alias',
+      'backlinks.posFrom',
+      'backlinks.posTo',
+      'wikiSyntax',
+      'fragmentKind',
+      'fragmentValue',
+      'blockKeys.claimCount as blockClaimCount',
+      'blocks.blockId as targetBlockId',
+      'blockKeys.ordinal as targetBlockOrdinal',
+      'blocks.text as targetBlockText',
+    ])
     .orderBy('sourcePath')
+    .orderBy('backlinks.posFrom')
     .execute()
+
+  return rows.map((row) => ({
+    sourcePath: row.sourcePath ?? null,
+    targetRaw: row.targetRaw ?? null,
+    alias: row.alias ?? null,
+    posFrom: row.posFrom ?? null,
+    posTo: row.posTo ?? null,
+    wikiSyntax: row.wikiSyntax ?? null,
+    fragmentKind: row.fragmentKind ?? null,
+    fragmentValue: row.fragmentValue ?? null,
+    blockAvailability:
+      row.fragmentKind !== 'block'
+        ? null
+        : row.blockClaimCount == null
+          ? 'missing'
+          : Number(row.blockClaimCount) === 1
+            ? 'resolved'
+            : 'ambiguous',
+    targetBlockId: row.targetBlockId ?? null,
+    targetBlockOrdinal:
+      row.targetBlockOrdinal == null ? null : Number(row.targetBlockOrdinal),
+    targetBlockText: row.targetBlockText ?? null,
+  }))
 }
 
 /** One backlink with the context the panel renders (Plan 07). */
@@ -38,6 +98,13 @@ export interface BacklinkContext {
    * in the panel can write the toggle through to the source note.
    */
   tasks: SnippetTask[]
+  fragmentKind: string | null
+  fragmentValue: string | null
+  wikiSyntax: string | null
+  blockAvailability: BlockAvailability | null
+  targetBlockId: string | null
+  targetBlockOrdinal: number | null
+  targetBlockText: string | null
 }
 
 /**
@@ -97,9 +164,9 @@ function throughSource(cursor: BacklinkSourceCursor) {
  * Backlinks of `path` with source titles and block-context snippets. One read
  * per distinct source; a source that vanished between query and read keeps its
  * row with an empty snippet (the index lags deletes only briefly). Mentions of
- * one source that produce an identical context collapse into one row — two
- * links to `path` in the same paragraph read as a single reference, exactly as
- * old Reflect deduplicated on `[target, contextHtml]`. Pages are bounded by
+ * one source that produce an identical context for the same target fragment
+ * collapse into one row. Different block fragments in the same paragraph stay
+ * distinct. Pages are bounded by
  * complete source notes rather than raw links: `limit` sources are selected by
  * recency/path keyset, then every matching position in those sources is
  * processed. Consequently `contexts.length` may be greater than `limit`.
@@ -161,12 +228,32 @@ export async function getBacklinksWithContext(
   let contextRowQuery = db
     .selectFrom('backlinks')
     .innerJoin('notes', 'notes.path', 'backlinks.sourcePath')
+    .leftJoin('blockKeys', (join) =>
+      join
+        .onRef('blockKeys.notePath', '=', 'backlinks.targetPath')
+        .onRef('blockKeys.blockId', '=', 'backlinks.fragmentValue'),
+    )
+    .leftJoin('blocks', (join) =>
+      join
+        .onRef('blocks.notePath', '=', 'backlinks.targetPath')
+        .onRef('blocks.ordinal', '=', 'blockKeys.ordinal'),
+    )
     .where('targetPath', '=', path)
     .where(throughSource({
       recencyMs: lastSource.recencyMs,
       sourcePath: lastSource.sourcePath,
     }))
-    .select(['backlinks.sourcePath', 'backlinks.posFrom'])
+    .select([
+      'backlinks.sourcePath',
+      'backlinks.posFrom',
+      'backlinks.fragmentKind',
+      'backlinks.fragmentValue',
+      'backlinks.wikiSyntax',
+      'blockKeys.claimCount as blockClaimCount',
+      'blocks.blockId as targetBlockId',
+      'blockKeys.ordinal as targetBlockOrdinal',
+      'blocks.text as targetBlockText',
+    ])
     .$narrowType<{ sourcePath: string; posFrom: number }>()
   if (options.cursor !== null) {
     contextRowQuery = contextRowQuery.where(afterSource(options.cursor))
@@ -178,16 +265,16 @@ export async function getBacklinksWithContext(
     .execute()
 
   const selectedSourcePaths = new Set(pageSources.map((source) => source.sourcePath))
-  const positionsBySource = new Map<string, number[]>()
+  const occurrencesBySource = new Map<string, typeof rows>()
   for (const row of rows) {
     if (!selectedSourcePaths.has(row.sourcePath)) {
       continue
     }
-    const positions = positionsBySource.get(row.sourcePath)
-    if (positions === undefined) {
-      positionsBySource.set(row.sourcePath, [row.posFrom])
+    const occurrences = occurrencesBySource.get(row.sourcePath)
+    if (occurrences === undefined) {
+      occurrencesBySource.set(row.sourcePath, [row])
     } else {
-      positions.push(row.posFrom)
+      occurrences.push(row)
     }
   }
 
@@ -216,25 +303,42 @@ export async function getBacklinksWithContext(
   const results: BacklinkContext[] = []
   for (const pageSource of pageSources) {
     const source = sources.get(pageSource.sourcePath)
-    const seenSnippets = new Set<string>()
-    for (const posFrom of positionsBySource.get(pageSource.sourcePath) ?? []) {
+    const seenContexts = new Set<string>()
+    for (const occurrence of occurrencesBySource.get(pageSource.sourcePath) ?? []) {
       const context =
         source == null
           ? { text: '', lineOrigins: [], lineSourceTexts: [] }
-          : blockContextLinesAt(source, posFrom, targetKeys)
+          : blockContextLinesAt(source, occurrence.posFrom, targetKeys)
       const snippet = context.text
+      const contextKey = `${snippet}\u0000${occurrence.fragmentKind ?? ''}\u0000${occurrence.fragmentValue ?? ''}`
       if (snippet !== '') {
-        if (seenSnippets.has(snippet)) {
+        if (seenContexts.has(contextKey)) {
           continue
         }
-        seenSnippets.add(snippet)
+        seenContexts.add(contextKey)
       }
+      const blockAvailability: BlockAvailability | null =
+        occurrence.fragmentKind !== 'block'
+          ? null
+          : occurrence.blockClaimCount == null
+            ? 'missing'
+            : Number(occurrence.blockClaimCount) === 1
+              ? 'resolved'
+              : 'ambiguous'
       results.push({
         sourcePath: pageSource.sourcePath,
         sourceTitle: pageSource.sourceTitle,
         snippet,
-        posFrom,
+        posFrom: occurrence.posFrom,
         tasks: extractSnippetTasks(snippet, context.lineOrigins, context.lineSourceTexts),
+        fragmentKind: occurrence.fragmentKind ?? null,
+        fragmentValue: occurrence.fragmentValue ?? null,
+        wikiSyntax: occurrence.wikiSyntax ?? null,
+        blockAvailability,
+        targetBlockId: occurrence.targetBlockId ?? null,
+        targetBlockOrdinal:
+          occurrence.targetBlockOrdinal == null ? null : Number(occurrence.targetBlockOrdinal),
+        targetBlockText: occurrence.targetBlockText ?? null,
       })
     }
   }
